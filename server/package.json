@@ -1,0 +1,40 @@
+{
+  "name": "@naeeman/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "نعيمًا API — إدارة طابور محلات الحلاقة (Express + MySQL)",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch --env-file-if-exists=.env src/server.js",
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "db:migrate": "node --env-file-if-exists=.env src/db/migrate.js up",
+    "db:status": "node --env-file-if-exists=.env src/db/migrate.js status",
+    "db:reset": "node --env-file-if-exists=.env src/db/migrate.js reset",
+    "db:bootstrap": "node --env-file-if-exists=.env src/db/bootstrap.js",
+    "db:setup": "npm run db:migrate && npm run db:bootstrap",
+    "test": "NODE_ENV=test node --test --test-concurrency=1 --env-file-if-exists=.env.test \"test/**/*.test.js\"",
+    "test:watch": "NODE_ENV=test node --test --watch --test-concurrency=1 --env-file-if-exists=.env.test \"test/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "compression": "^1.8.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "express": "^4.22.3",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.12.1",
+    "mysql2": "^3.24.5",
+    "nodemailer": "^10.0.14",
+    "web-push": "^3.6.7",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "supertest": "^7.3.1"
+  }
+}
