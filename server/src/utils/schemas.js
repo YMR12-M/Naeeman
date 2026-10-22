@@ -37,6 +37,20 @@ export const passwordSchema = z.string().max(128).superRefine((value, ctx) => {
   }
 });
 
+/**
+ * كلمة سر الزبون: أخفّ من الموظفين (حسابه شايل أدواره بس)، لكن مش ضعيفة.
+ * 8 حروف على الأقل، ومش من الشائعة، ومش حرف مكرّر.
+ */
+export const customerPasswordSchema = z.string().max(128).superRefine((value, ctx) => {
+  const issues = [];
+  if (value.length < 8) issues.push('8 حروف على الأقل');
+  if (/^(.)\1+$/.test(value)) issues.push('مش حرف واحد مكرّر');
+  if (/^(0123456789|123456789|12345678|password|qwertyui)/i.test(value)) issues.push('مش من كلمات السر الشائعة');
+  if (issues.length > 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: `كلمة السر لازم: ${issues.join('، ')}` });
+  }
+});
+
 export const timeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, 'الوقت بصيغة HH:MM');
 
 /** نصّ اختياري: الفارغ ← null، والغائب يبقى غائبًا */

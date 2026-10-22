@@ -52,6 +52,16 @@ export const templates = {
     }),
     text: `أهلًا ${name}\nتم إنشاء حساب لك في ${shopName} (${role}) بالبريد ${email}.\nحدّد كلمة المرور من الرابط (صالح 3 أيام):\n${link}`,
   }),
+
+  customer_password_reset: ({ name, link }) => ({
+    subject: `استعادة كلمة السر — ${env.brand.name}`,
+    html: layout({
+      title: 'استعادة كلمة السر',
+      body: `<p>أهلًا ${esc(name)}،</p><p>وصلنا طلب لتغيير كلمة سر حسابك في ${esc(env.brand.name)}. الرابط صالح لمدّة ساعة واحدة.</p><p>لو مش إنت اللي طلبت، تجاهل الرسالة وحسابك آمن.</p>`,
+      button: { url: link, label: 'تغيير كلمة السر' },
+    }),
+    text: `أهلًا ${name}\nلتغيير كلمة السر افتح الرابط (صالح لساعة):\n${link}\nلو مش إنت اللي طلبت تجاهل الرسالة.`,
+  }),
 };
 
 export function renderTemplate(name, payload) {

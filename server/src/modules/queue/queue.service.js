@@ -27,6 +27,7 @@ import {
   KEY_STEP, delayTarget, estimateQueue, keyAt, learnStat, pickNext, roundedWait,
 } from '../../queue/engine.js';
 import { publishQueue } from '../../queue/bus.js';
+import { verifyCheckin } from '../../queue/checkin.js';
 
 const MINUTE = 60_000;
 const read = { query, queryOne };
@@ -686,6 +687,25 @@ export const queueService = {
     });
   },
 
+  /**
+   * الزبون وصل: مسح الكود المتغيّر اللي على شاشة التلفزيون.
+   * الكود بيثبت إنه جوّه المحل فعلًا (QR ثابت كان ممكن يتصوّر ويتمسح من البيت).
+   */
+  checkIn(shopId, ticketId, code, actor) {
+    return withQueue(shopId, async (tx, state) => {
+      const ticket = findWaiting(state, ticketId);
+      if (!verifyCheckin(state.shop.checkin_secret, shopId, code, state.now)) {
+        throw ApiError.unprocessable('الكود ده مش صحيح أو قديم — امسح الكود اللي على الشاشة دلوقتي', {
+          code: 'BAD_CHECKIN_CODE', details: { code: 'غير صحيح أو قديم' },
+        });
+      }
+      if (ticket.arrived_at) return { arrived: true };
+      await tx.execute('UPDATE queue_tickets SET arrived_at = NOW() WHERE id = ?', [ticket.id]);
+      await event(tx, ticket, 'arrived', actor, { via: 'code' });
+      return { arrived: true };
+    });
+  },
+
   /** الزبون دَاس «جاي» */
   confirmComing(shopId, ticketId, actor) {
     return withQueue(shopId, async (tx, state) => {
@@ -726,5 +746,26 @@ export const queueService = {
   },
 };
 
-/** الانتظار المقرّب اللي بيتعرض للزبون (موجود هنا عشان واجهات الزبون والتلفزيون تستعمله) */
-export { roundedWait };
+/* ── للعروض اللي من برّه الطابور (الزبون، الصفحة العامة، التلفزيون): قراية بس، من غير قفل ── */
+
+/** صورة الطابور لمحل (قراية بس) */
+export const readState = (shopId, now = new Date()) => loadState(read, shopId, now);
+
+/** الأدوار بخدماتها (قراية بس) */
+export const readTickets = async (where, params) => attachServices(
+  read,
+  (await query(`SELECT ${TICKET_COLUMNS} FROM queue_tickets WHERE ${where}`, params)).map(shapeTicket),
+);
+
+/**
+ * الوقت المتوقّع لدور «تجريبي» لو اتضاف دلوقتي (من غير ما يتضاف):
+ * إمتى هيبدأ لو طلب حلاق معيّن أو أي حد. مدّته نفسها ما بتفرقش في وقت بدايته.
+ */
+export function probeStart(state, barberId = null) {
+  const probe = { id: -1, status: 'waiting', preferred_barber_id: barberId, services: [] };
+  return estimateQueue({
+    now: state.now, barbers: state.barbers, tickets: [...state.tickets, probe], stats: state.stats,
+  }).tickets.get(-1);
+}
+
+export { estimate, roundedWait };

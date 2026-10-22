@@ -65,6 +65,14 @@ export const pairingLimiter = make({
   message: 'محاولات ربط كتير — جرّب بعد 15 دقيقة',
 });
 
+/** كود الـ check-in ستة أرقام ومتغيّر كل دقيقة */
+export const checkinLimiter = make({
+  windowMs: 15 * 60_000,
+  limit: 30,
+  skipSuccessfulRequests: true,
+  message: 'محاولات كتير — اسأل الاستقبال يعلّمك واصل',
+});
+
 /** الـ PIN أربعة أرقام: حدّ ضيّق، ويكمله قفل الحلاق بعد محاولات فاشلة */
 export const pinLimiter = make({
   windowMs: 15 * 60_000,
