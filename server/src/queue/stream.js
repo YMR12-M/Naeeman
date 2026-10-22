@@ -27,8 +27,9 @@ const DEBOUNCE_MS = 100;
  * @param {number}   options.shopId
  * @param {Function} options.render     () => Promise<object>  الصورة اللي تتبعت (لازم فيها version)
  * @param {number}   [options.expiresAt] لحظة انتهاء التوكن (ms)
+ * @param {number}   [options.tickMs]    إعادة حساب دورية حتى من غير تغيير (شاشة التلفزيون: كود الـ check-in بيتغيّر كل دقيقة)
  */
-export function openQueueStream(req, res, { shopId, render, expiresAt }) {
+export function openQueueStream(req, res, { shopId, render, expiresAt, tickMs }) {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache, no-transform',
@@ -60,6 +61,7 @@ export function openQueueStream(req, res, { shopId, render, expiresAt }) {
 
   const unsubscribe = subscribeQueue(shopId, schedule);
   const heartbeat = setInterval(() => res.write(': ping\n\n'), HEARTBEAT_MS);
+  const ticker = tickMs ? setInterval(schedule, tickMs) : null;
   const expiry = expiresAt
     ? setTimeout(() => {
       res.write('event: reauth\ndata: {}\n\n');
@@ -71,6 +73,7 @@ export function openQueueStream(req, res, { shopId, render, expiresAt }) {
     closed = true;
     unsubscribe();
     clearInterval(heartbeat);
+    clearInterval(ticker);
     clearTimeout(timer);
     clearTimeout(expiry);
   };

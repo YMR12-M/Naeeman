@@ -1,6 +1,6 @@
 # نعيمًا — خطّة المرحلة الأولى
 
-حالة المشروع (2026-10-22): **السيرفر اتبدأ: الأساس ونواة الطابور جاهزين** (التفاصيل في [`STATUS.md`](STATUS.md)). المشروع ماشي **بطريقة DR.Care في شكل المنتج**، و**بالستاك المعتاد** (زي نُزُل ومصروفي) في الكود. القرارات المفتوحة مكتوبة في آخر الملف.
+حالة المشروع (2026-10-22): **السيرفر خلص بخطواته الخمسة** (الأساس، والطابور، والزباين، والأجهزة، وملخّص اليوم)، والواجهات لسه (التفاصيل في [`STATUS.md`](STATUS.md)). المشروع ماشي **بطريقة DR.Care في شكل المنتج**، و**بالستاك المعتاد** (زي نُزُل ومصروفي) في الكود. القرارات المفتوحة مكتوبة في آخر الملف.
 
 ## الفكرة في سطرين
 محل الحلاقة من غير قعدة الانتظار. الزبون ياخد دوره من الموبايل أو من تابلت على باب المحل، ويعرف قدّامه كام وهيستنى قد إيه، ويوصله إشعار لما دوره يقرّب. والحلاق شغله كله زرار واحد: «التالي».
@@ -169,14 +169,14 @@ QR ثابت على الباب ممكن يتصوّر ويتعمل منه check-in
 ## المسارات (API) — بادئة `/api/v1`
 ### مصادقة
 - **الموظفين:** نفس نُزُل (`/auth/login`، و`/auth/refresh`، و`/auth/logout`، و`/auth/forgot-password`، و`/auth/reset-password`، و`/auth/change-password`).
-- **الزبون:** `POST /customer-auth/register {name, phone, password}`، و`/customer-auth/login`، و`/customer-auth/refresh`، و`/customer-auth/logout`.
+- **الزبون:** `POST /customer-auth/register {name, phone, password, email?}`، و`/customer-auth/login`، و`/customer-auth/refresh`، و`/customer-auth/logout`، و`/customer-auth/forgot-password` و`/reset-password` (بالبريد لو الزبون حطّه).
 - **الأجهزة:** `POST /devices/pair {code}` بيرجّع توكن الجهاز. و`POST /chair/login {barber_id, pin}` لتابلت الكرسي.
 
 ### إدارة المحل (موظفين)
 - `GET/PATCH /shop`، و`GET/PUT /shop/hours`، و`GET/PATCH /shop/settings`.
 - `GET/POST/PATCH/DELETE /services`.
 - `GET/POST/PATCH /barbers`، و`POST /barbers/:id/status {status, break_minutes?}`.
-- `GET/POST/DELETE /devices`، و`POST /devices/pairing-code {type, barber_id?}`.
+- `GET /devices`، و`PATCH/DELETE /devices/:id`، و`POST /devices/pairing-code {type, name?}` (المالك بس).
 - `GET/POST/PATCH /users` (الفريق، زي نُزُل).
 
 ### الطابور (موظفين وتابلت الكرسي)
@@ -189,18 +189,20 @@ QR ثابت على الباب ممكن يتصوّر ويتعمل منه check-in
 
 ### الأجهزة
 - `GET /display/queue` و`GET /display/stream` (توكن شاشة): الدور الحالي عند كل كرسي، وأول ٥ جايين، ومتوسّط الانتظار، والكود المتغيّر للـ check-in.
-- `GET /kiosk/options` و`POST /kiosk/tickets {service_ids, barber_id?, name, phone?}` (توكن الكشك).
+- `GET /kiosk/options` و`POST /kiosk/tickets {service_ids, barber_id?, name?, phone?}` و`POST /kiosk/tickets/:id/cancel` (دوره هو بس، خلال دقيقة).
+- `GET /chair/barbers`، و`POST /chair/login {barber_id, pin}` و`/chair/logout`، و`GET /chair/queue` و`/chair/stream`، و`POST /chair/next` و`/finish` و`/services {service_id}` و`/status {status, break_minutes?}`.
 
 ### عام (من غير حساب)
-- `GET /public/shop`: الاسم، وفاتح ولا لأ، وعدد الطابور، والوقت المتوقّع لكل حلاق، والخدمات. من غير أي بيانات شخصية.
+- `GET /public/shops/:slug` و`/public/shops/:slug/stream`: الاسم، وفاتح ولا لأ، وعدد الطابور، والوقت المتوقّع لكل حلاق، والخدمات. من غير أي بيانات شخصية.
+- `GET /public/push-key`: المفتاح العام لإشعارات المتصفّح.
 
 ### الزبون
-- `POST /me/tickets {service_ids, barber_id?}`، و`GET /me/tickets/active`، و`GET /me/tickets` (السجل)، و`GET /me/stream` (SSE).
+- `POST /me/tickets {shop_slug, service_ids, barber_id?}`، و`GET /me/tickets/active`، و`GET /me/tickets/:id`، و`GET /me/tickets` (السجل)، و`GET /me/stream` (SSE).
 - `POST /me/tickets/:id/coming`، و`/delay`، و`/cancel`، و`/check-in {code}`.
 - `POST /me/push-subscriptions`، و`PATCH /me`.
 
 ### تقارير
-- `GET /reports/today`: عدد الأدوار، واللي خلص، واللي ما جاش، ومتوسّط الانتظار، ومتوسّط مدّة الخدمة، وإيراد كل حلاق.
+- `GET /reports/today?date=`: عدد الأدوار، واللي خلص، واللي ما جاش، ومتوسّط الانتظار، ومتوسّط مدّة الخدمة، وإيراد كل حلاق.
 - `GET /audit`: للمالك.
 
 ## الشاشات
