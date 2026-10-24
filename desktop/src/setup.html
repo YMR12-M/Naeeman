@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'" />
+  <title>نعيمًا — أوّل تشغيل</title>
+  <!-- أوّل تشغيل: عنوان سيرفر المحل. نفس ألوان «صالون زمان» (حيطة نعناعي، مراية، جلد) -->
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #A9D6C4; color: #143C38;
+      font-family: 'Segoe UI', Tahoma, 'Geeza Pro', sans-serif; }
+    .mirror { width: min(460px, 92vw); padding: 32px 28px; background: #E9F1EE; border: 5px solid #B9BFC4; border-radius: 10px;
+      box-shadow: inset 0 0 0 1px #5E676E, 0 0 0 1px #5E676E; }
+    .sign { display: inline-block; padding: 4px 28px 8px; margin-bottom: 18px; background: #143C38; color: #F3EBDD; border-radius: 3px;
+      font-size: 1.6rem; font-weight: 700; outline: 1.5px solid #F3EBDD; outline-offset: -5px; }
+    h1 { font-size: 1.25rem; margin: 0 0 6px; }
+    p { margin: 0 0 18px; color: #46605B; line-height: 1.7; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; }
+    input { width: 100%; min-height: 46px; padding: 0 12px; font-size: 1.05rem; direction: ltr; text-align: left;
+      border: 1.5px solid #5E676E; border-radius: 6px; background: #fff; color: #143C38; }
+    input:focus { outline: none; box-shadow: 0 0 0 3px rgba(31, 63, 138, 0.45); }
+    button { margin-top: 16px; width: 100%; min-height: 48px; font-size: 1.1rem; font-weight: 600; color: #F3EBDD; background: #8E1F1B;
+      border: 0; border-radius: 10px; outline: 1.5px dashed #E3B9A6; outline-offset: -6px; cursor: pointer; }
+    button:disabled { opacity: 0.6; cursor: wait; }
+    .error { margin-top: 12px; padding: 10px 12px; border-inline-start: 4px solid #9B1C1C; background: #F6DEDC; border-radius: 6px; display: none; }
+    .hint { font-size: 0.85rem; margin-top: 6px; color: #46605B; }
+  </style>
+</head>
+<body>
+  <form class="mirror" id="form" novalidate>
+    <div class="sign">نعيمًا</div>
+    <h1>أهلًا — فين سيرفر المحل؟</h1>
+    <p>اكتب عنوان سيرفر نعيمًا اللي المحل شغّال عليه. لو السيرفر على نفس الكمبيوتر اكتب <bdi>localhost:4030</bdi>.</p>
+    <label for="url">عنوان السيرفر</label>
+    <input id="url" name="url" autocomplete="url" placeholder="https://naeeman-api.example.com" autofocus />
+    <div class="hint">تقدر تغيّره بعدين من قايمة «نعيمًا» ← «سيرفر المحل».</div>
+    <div class="error" id="error" role="alert"></div>
+    <button type="submit" id="save">اتصل</button>
+  </form>
+  <script src="setup.js"></script>
+</body>
+</html>

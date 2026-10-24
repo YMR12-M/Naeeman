@@ -1,0 +1,58 @@
+{
+  "name": "@naeeman/desktop",
+  "productName": "Naeeman",
+  "version": "0.1.0",
+  "private": true,
+  "description": "نعيمًا — لوحة المحل على كمبيوتر المحل، وشاشة التلفزيون على الشاشة التانية (Electron)",
+  "author": "Younis Mohamed Ramadan",
+  "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "build:client": "node scripts/build-client.mjs",
+    "start": "npm run build:client && electron .",
+    "dev": "electron .",
+    "smoke": "node scripts/smoke.mjs",
+    "dist": "npm run build:client && electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^43.8.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "app.naeeman.desktop",
+    "productName": "نعيمًا",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**",
+      "app/**",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.business",
+      "target": [
+        "dmg"
+      ],
+      "icon": "../brand/png/icon-1024.png"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "../brand/png/icon-1024.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "../brand/png/icon-1024.png",
+      "category": "Office"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "language": "1025"
+    }
+  }
+}

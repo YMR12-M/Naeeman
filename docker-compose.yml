@@ -1,0 +1,54 @@
+# ═══════════════════════════════════════════════════════════════
+#  نعيمًا كله على جهاز واحد: MySQL + السيرفر + الواجهتين
+#
+#    cp deploy/.env.example .env      # وعدّل القيم (الأسرار وأوّل مالك)
+#    docker compose up -d --build
+#
+#  لوحة المحل:   http://localhost:5200
+#  تطبيق الزبون: http://localhost:5201
+#
+#  الإنتاج لازم HTTPS قدّام الاتنين (كوكي آمنة، وإشعارات المتصفّح، والكاميرا
+#  على الموبايل): حط Caddy أو أي reverse proxy قدّامهم، وعدّل العناوين في .env.
+# ═══════════════════════════════════════════════════════════════
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-naeeman}
+      MYSQL_USER: ${DB_USER:-naeeman}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?اكتب DB_PASSWORD في .env}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?اكتب DB_ROOT_PASSWORD في .env}
+      TZ: UTC
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build: ./server
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+    env_file: .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      PORT: 4030
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "${PANEL_PORT:-5200}:80"
+      - "${APP_PORT:-5201}:8080"
+
+volumes:
+  db-data:

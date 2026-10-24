@@ -1,0 +1,121 @@
+# ═══════════════════════════════════════════════════════════════
+#  نعيمًا على Render: السيرفر + لوحة المحل + تطبيق الزبون
+#
+#  • السيرفر محتاج MySQL من برّه (Render ما عندوش MySQL) — مثلًا Aiven:
+#    اكتب DB_* من الداشبورد، وDB_SSL=true.
+#  • الواجهتين static، وبيوصّلوا /api للسيرفر (نفس الموقع: الكوكي شغّالة).
+#  • لو غيّرت أسامي الخدمات، عدّل العناوين في CLIENT_ORIGIN والـ rewrites.
+#  • الخطة المجانية بتنام بعد ربع ساعة من غير زيارات، وأوّل طلب بياخد دقيقة.
+# ═══════════════════════════════════════════════════════════════
+services:
+  - type: web
+    name: naeeman-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    rootDir: server
+    autoDeploy: false
+    buildCommand: npm ci --omit=dev
+    startCommand: node src/db/migrate.js up && (node src/db/bootstrap.js || true) && node src/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22.14.0
+      - key: APP_URL
+        value: https://naeeman.onrender.com
+      - key: CUSTOMER_APP_URL
+        value: https://naeeman-app.onrender.com
+      - key: API_PUBLIC_URL
+        value: https://naeeman-api.onrender.com
+      - key: CLIENT_ORIGIN
+        value: https://naeeman.onrender.com,https://naeeman-app.onrender.com
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE
+        value: lax
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        value: naeeman
+      - key: DB_SSL
+        value: "true"
+      - key: DB_CONNECTION_LIMIT
+        value: "5"
+      - key: MAIL_DISABLED
+        value: "true"
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
+      - key: JOBS_ENABLED
+        value: "true"
+      # أوّل تشغيل بس: المحل والمالك (احذف ADMIN_PASSWORD بعد أوّل دخول)
+      - key: SHOP_NAME
+        sync: false
+      - key: SHOP_SLUG
+        sync: false
+      - key: ADMIN_NAME
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+  - type: web
+    name: naeeman
+    runtime: static
+    rootDir: client
+    autoDeploy: false
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: NODE_VERSION
+        value: 22.14.0
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://naeeman-api.onrender.com/api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+
+  - type: web
+    name: naeeman-app
+    runtime: static
+    rootDir: mobile
+    autoDeploy: false
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: NODE_VERSION
+        value: 22.14.0
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://naeeman-api.onrender.com/api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
