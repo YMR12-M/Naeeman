@@ -1,0 +1,133 @@
+/* ═══════════════════════════════════════════════════════════════
+   قطع المحل (docs/DESIGN_SYSTEM.md قسم 2 و5)
+   يافطة · مراية · ماركر · جلد · بلاط · قايمة أسعار · رقم الدور · يافطة «مفتوح»
+   مفيش ظلال: العمق من الإطارات والحواف، زي المحل بالظبط.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── اليافطة: لوح غامق، خط دهان داخلي، كلام بالرقعة، ومسمارين ── */
+.sign {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  min-height: 46px; padding: 2px 36px 8px;
+  background: var(--sign-board); color: var(--sign-text);
+  font-family: var(--font-sign); font-weight: 700; font-size: 1.45rem; line-height: 1.5;
+  border-radius: var(--r-sign); white-space: nowrap;
+}
+.sign::after {
+  content: ''; position: absolute; inset: 4px; pointer-events: none;
+  border: 1.5px solid var(--sign-line); border-radius: 2px;
+}
+.sign .screw {
+  position: absolute; top: 50%; width: 9px; height: 9px; margin-top: -4.5px;
+  background: var(--chrome); border: 1.5px solid var(--chrome-edge); border-radius: 50%;
+}
+.sign .screw::after {
+  content: ''; position: absolute; inset-inline: 1px; top: 50%; height: 1.5px; margin-top: -0.75px;
+  background: var(--chrome-edge); transform: rotate(35deg);
+}
+.sign .screw.start { inset-inline-start: 13px; }
+.sign .screw.end { inset-inline-end: 13px; }
+.sign .screw.end::after { transform: rotate(145deg); }
+.sign.sm { min-height: 34px; padding: 0 28px 4px; font-size: 1.1rem; }
+.sign.sm::after { inset: 3px; border-width: 1px; }
+.sign.sm .screw { width: 7px; height: 7px; margin-top: -3.5px; }
+.sign.sm .screw.start { inset-inline-start: 10px; }
+.sign.sm .screw.end { inset-inline-end: 10px; }
+.sign.lg { min-height: 64px; padding: 4px 48px 12px; font-size: 2.2rem; }
+.sign.lg .screw.start { inset-inline-start: 17px; }
+.sign.lg .screw.end { inset-inline-end: 17px; }
+.sign.block { display: flex; width: 100%; }
+
+/* اسم «نعيمًا» على يافطة: مسار مش نص */
+.wordmark { display: block; fill: currentColor; height: 1.5em; width: auto; }
+
+/* ── المراية: زجاج جوّه إطار كروم بحافة غامقة من جوّه ومن برّه ── */
+.mirror {
+  position: relative;
+  background: var(--surface); color: var(--text);
+  border: var(--frame) solid var(--chrome); border-radius: var(--r-md);
+  box-shadow: inset 0 0 0 1px var(--chrome-edge), 0 0 0 1px var(--chrome-edge);
+}
+.mirror.thin { border-width: var(--frame-sm); }
+.mirror.arch { border-radius: var(--r-arch) var(--r-arch) var(--r-sm) var(--r-sm); }
+.mirror .muted, .mirror.muted { color: var(--text-muted-glass); }
+/* المراية بتنوّر مرّة لما دور الزبون ييجي */
+.mirror.flash { animation: mirror-flash 900ms var(--ease) 1; }
+@keyframes mirror-flash { 30% { background: var(--surface-strong); box-shadow: inset 0 0 0 1px var(--chrome-edge), 0 0 0 1px var(--chrome-edge), 0 0 0 6px var(--marker-soft); } }
+
+/* ── الماركر: خط إيد أزرق مايل شوية، لملاحظات قصيرة جوّه المرايات بس ── */
+.marker {
+  display: inline-block; font-family: var(--font-marker); font-weight: 500; color: var(--marker);
+  transform: rotate(-2deg); line-height: 1.5;
+}
+.marker.flat { transform: none; }
+.marker.ok { color: var(--ok); }
+/* الرقم بيتمسح ويتكتب لما يتغيّر */
+.marker.rewrite { animation: marker-rewrite 420ms var(--ease) 1; }
+@keyframes marker-rewrite { 0% { clip-path: inset(0 0 0 0); } 35% { clip-path: inset(0 0 0 100%); opacity: 0.2; } 36% { clip-path: inset(0 100% 0 0); opacity: 1; } 100% { clip-path: inset(0 0 0 0); } }
+
+/* ── الجلد: الزرار الأساسي الوحيد في الشاشة، بخياطة متقطّعة ── */
+.leather {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
+  min-height: var(--touch); padding: 0 var(--sp-5);
+  background: var(--leather); color: var(--on-leather);
+  border: 0; border-radius: var(--r-md);
+  font-weight: 600; font-size: var(--fs-md); white-space: nowrap; user-select: none;
+  transition: transform var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+.leather::after {
+  content: ''; position: absolute; inset: 5px; pointer-events: none;
+  border: 1.5px dashed var(--stitch); border-radius: calc(var(--r-md) - 4px);
+  transition: inset var(--t-fast) var(--ease);
+}
+.leather:hover:not(:disabled) { background: var(--leather-press); }
+.leather:active:not(:disabled) { transform: translateY(2px); }
+.leather:active:not(:disabled)::after { inset: 4px; }
+.leather:disabled { opacity: 0.55; cursor: not-allowed; }
+.leather.sm { min-height: 34px; padding: 0 var(--sp-4); font-size: var(--fs-sm); }
+.leather.sm::after { inset: 4px; border-width: 1px; }
+.leather.block { width: 100%; }
+/* زرار «التالي» على تابلت الكرسي: تلت الشاشة على الأقل، بالرقعة */
+.leather.giant { min-height: 34vh; border-radius: 18px; font-family: var(--font-sign); font-size: clamp(3rem, 9vw, 6rem); }
+.leather.giant::after { inset: 10px; border-width: 2.5px; border-radius: 12px; }
+
+/* ── البلاط: شريط تحت الشاشة فيه الأزرار التانوية، فوقه حافة غامقة ── */
+.tiles {
+  background-color: var(--tile);
+  background-image:
+    linear-gradient(var(--tile-grout) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, var(--tile-grout) 1.5px, transparent 1.5px);
+  background-size: var(--tile-size) var(--tile-size);
+  border-top: 3px solid var(--ink);
+}
+
+/* ── قايمة الأسعار: الخدمة ونقط وبعدين السعر ── */
+.price-row { display: flex; align-items: baseline; gap: var(--sp-2); }
+.price-row .leader { flex: 1; min-width: 16px; border-bottom: 2px dotted currentColor; opacity: 0.45; transform: translateY(-5px); }
+.price-row .price { white-space: nowrap; font-weight: 600; }
+
+/* ── رقم الدور ── */
+.ticket-number { font-family: var(--font-number); font-weight: 700; line-height: 1.05; direction: ltr; unicode-bidi: isolate; display: inline-block; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+/* ── يافطة «مفتوح / مقفول» متعلّقة بخيط ── */
+.open-sign { position: relative; display: inline-flex; flex-direction: column; align-items: center; padding-top: 10px; }
+.open-sign::before {
+  content: ''; position: absolute; top: 0; left: 50%; width: 30px; height: 12px; margin-left: -15px;
+  border: 1.5px solid var(--chrome-edge); border-bottom: 0; border-radius: 15px 15px 0 0;
+}
+.open-sign span {
+  padding: 1px 12px 3px; border-radius: var(--r-sign); font-weight: 600; font-size: var(--fs-sm);
+  border: 1.5px solid var(--ink); background: var(--surface); color: var(--text);
+}
+.open-sign.open span { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+:root[data-theme='dark'] .open-sign.open span { color: #0F2B28; }
+
+/* ── صورة الحلاق في مراية صغيرة (أو أوّل حرف لو مفيش صورة) ── */
+.portrait {
+  width: 52px; height: 52px; flex: none; display: grid; place-items: center;
+  font-family: var(--font-sign); font-size: 1.5rem; color: var(--text);
+  background: var(--surface); border: var(--frame-sm) solid var(--chrome);
+  box-shadow: inset 0 0 0 1px var(--chrome-edge), 0 0 0 1px var(--chrome-edge);
+  border-radius: var(--r-arch) var(--r-arch) var(--r-sm) var(--r-sm); overflow: hidden;
+}
+.portrait img { width: 100%; height: 100%; object-fit: cover; }
+.portrait.lg { width: 84px; height: 96px; font-size: 2.4rem; }

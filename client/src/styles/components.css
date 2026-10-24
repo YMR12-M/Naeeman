@@ -1,0 +1,168 @@
+/* ═══ أدوات الشغل العادية: أزرار وحقول وجداول ونوافذ ═══
+   الزرار الأساسي = جلد (.leather في brand.css)، مرّة واحدة في الشاشة.
+   الباقي هادي: زجاج بحافة كروم، أو شفاف. */
+
+/* ── الأزرار ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
+  min-height: 40px; padding: 0 var(--sp-4);
+  border: 1.5px solid var(--line-strong); border-radius: var(--r-md);
+  background: var(--surface); color: var(--text);
+  font-weight: 500; font-size: var(--fs-md); line-height: 1; white-space: nowrap; user-select: none;
+  transition: background var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+.btn:hover:not(:disabled) { background: var(--surface-strong); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn.ghost { background: transparent; border-color: transparent; }
+.btn.ghost:hover:not(:disabled) { background: var(--surface); border-color: var(--line); }
+.btn.danger { color: var(--danger); border-color: var(--danger); background: transparent; }
+.btn.danger:hover:not(:disabled) { background: var(--danger-soft); }
+/* «primary» في اللوحة = جلد (الأدوات المنقولة من نُزُل بتنادي variant="primary") */
+.btn.primary { position: relative; background: var(--leather); color: var(--on-leather); border-color: var(--leather); }
+.btn.primary::after { content: ''; position: absolute; inset: 4px; border: 1px dashed var(--stitch); border-radius: calc(var(--r-md) - 4px); pointer-events: none; }
+.btn.primary:hover:not(:disabled) { background: var(--leather-press); }
+.btn.sm { min-height: 32px; padding: 0 var(--sp-3); font-size: var(--fs-sm); }
+.btn.lg { min-height: 50px; padding: 0 var(--sp-5); font-size: var(--fs-lg); }
+.btn.icon { width: 40px; padding: 0; }
+.btn.icon.sm { width: 32px; }
+.btn.block { width: 100%; }
+
+.spinner {
+  width: 18px; height: 18px; flex: none; border: 2.5px solid currentColor; border-inline-end-color: transparent;
+  border-radius: 50%; animation: spin 700ms linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── الحقول ── */
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field > label, .label { font-size: var(--fs-sm); font-weight: 600; color: var(--text); }
+.field .hint { font-size: var(--fs-xs); color: var(--text-muted); }
+.field .error { font-size: var(--fs-xs); color: var(--danger); font-weight: 600; }
+.field .req { color: var(--danger); margin-inline-start: 2px; }
+
+.input, .select, .textarea {
+  width: 100%; min-height: 44px; padding: 0 var(--sp-3);
+  background: var(--surface-strong); color: var(--text);
+  border: 1.5px solid var(--line-strong); border-radius: var(--r-sm);
+  transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.textarea { padding: var(--sp-3); min-height: 88px; resize: vertical; line-height: 1.6; }
+.input::placeholder, .textarea::placeholder { color: var(--text-muted); opacity: 0.8; }
+.input:focus, .select:focus, .textarea:focus { outline: none; border-color: var(--marker); box-shadow: var(--ring); }
+.input[aria-invalid='true'], .select[aria-invalid='true'], .textarea[aria-invalid='true'] { border-color: var(--danger); }
+.input:disabled, .select:disabled { opacity: 0.6; cursor: not-allowed; }
+.input[type='number'], .input[type='time'], .input[type='tel'], .input.ltr-input { direction: ltr; text-align: end; }
+.select {
+  appearance: none; padding-inline-start: 34px; background-repeat: no-repeat; background-position: left 12px center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%23143C38' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
+}
+:root[data-theme='dark'] .select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%23E4EEE9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
+}
+
+.input-group { display: flex; align-items: stretch; }
+.input-group > .input { border-radius: 0; }
+.input-group > .addon { display: flex; align-items: center; padding: 0 var(--sp-3); background: var(--surface); border: 1.5px solid var(--line-strong); color: var(--text-muted); font-size: var(--fs-sm); white-space: nowrap; }
+.input-group > :first-child { border-start-start-radius: var(--r-sm); border-end-start-radius: var(--r-sm); }
+.input-group > :last-child { border-start-end-radius: var(--r-sm); border-end-end-radius: var(--r-sm); }
+.input-group > * + * { border-inline-start: 0; }
+
+.check { display: inline-flex; align-items: center; gap: var(--sp-2); cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--ink); }
+
+/* المفتاح: مفتاح نور قديم — مربّع بيتحرّك على لوح */
+.switch { position: relative; width: 46px; height: 26px; flex: none; }
+.switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.switch span { position: absolute; inset: 0; background: var(--surface); border: 1.5px solid var(--line-strong); border-radius: var(--r-sm); pointer-events: none; transition: background var(--t-base) var(--ease); }
+.switch span::after { content: ''; position: absolute; top: 3px; inset-inline-start: 3px; width: 17px; height: 17px; background: var(--chrome-edge); border-radius: 3px; transition: transform var(--t-base) var(--ease); }
+.switch input:checked + span { background: var(--ink); border-color: var(--ink); }
+.switch input:checked + span::after { transform: translateX(-20px); background: var(--cream); }
+:root[data-theme='dark'] .switch input:checked + span::after { background: #0F2B28; }
+.switch input:focus-visible + span { box-shadow: var(--ring); }
+
+.segmented { display: inline-flex; padding: 3px; gap: 2px; background: var(--surface); border: 1.5px solid var(--line-strong); border-radius: var(--r-md); }
+.segmented button { border: 0; background: transparent; padding: 6px 14px; border-radius: var(--r-sm); font-weight: 500; font-size: var(--fs-sm); color: var(--text); }
+.segmented button[aria-pressed='true'] { background: var(--ink); color: var(--cream); }
+:root[data-theme='dark'] .segmented button[aria-pressed='true'] { color: #0F2B28; }
+
+/* ── الشارات ── */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px; padding: 0 9px; min-height: 24px;
+  border-radius: var(--r-sign); border: 1.5px solid var(--line); background: var(--surface);
+  font-size: var(--fs-xs); font-weight: 600; white-space: nowrap; color: var(--text);
+}
+.badge.ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+.badge.danger { background: var(--danger-soft); color: var(--danger); border-color: transparent; }
+.badge.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.badge.marker { background: var(--marker-soft); color: var(--marker); border-color: transparent; }
+.badge.ink { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+:root[data-theme='dark'] .badge.ink { color: #0F2B28; }
+
+/* ── لوح (لوحة إعدادات أو قايمة): زجاج بحافة كروم رفيعة — مش «كارت أبيض» ── */
+.panel { background: var(--surface); border: var(--frame-sm) solid var(--chrome); box-shadow: inset 0 0 0 1px var(--chrome-edge), 0 0 0 1px var(--chrome-edge); border-radius: var(--r-md); }
+.panel > .panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; padding: var(--sp-3) var(--sp-4); border-bottom: 1.5px solid var(--line); }
+.panel > .panel-body { padding: var(--sp-4); }
+.panel > .panel-body.flush { padding: 0; }
+
+/* ── الجداول: سطور دفتر بسيطة ── */
+.table-wrap { overflow-x: auto; }
+.table th { text-align: start; font-size: var(--fs-xs); font-weight: 600; color: var(--text-muted-glass); padding: var(--sp-2) var(--sp-4); white-space: nowrap; border-bottom: 1.5px solid var(--line-strong); }
+.table td { padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--line); vertical-align: middle; }
+.table tbody tr:last-child td { border-bottom: 0; }
+.table td.actions { text-align: end; white-space: nowrap; }
+
+/* ── الحالة الفاضية ── */
+.empty { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); padding: var(--sp-6) var(--sp-4); text-align: center; color: var(--text-muted-glass); }
+
+/* ── شريط تنبيه ── */
+.banner { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; padding: var(--sp-3) var(--sp-4); border-radius: var(--r-sm); background: var(--warn-soft); color: var(--text); border-inline-start: 4px solid var(--warn); }
+.banner.danger { background: var(--danger-soft); border-color: var(--danger); }
+.banner.info { background: var(--marker-soft); border-color: var(--marker); }
+.banner.ok { background: var(--ok-soft); border-color: var(--ok); }
+
+/* ── النوافذ: مراية مستطيلة ── */
+.overlay { position: fixed; inset: 0; z-index: var(--z-modal); background: var(--overlay); display: grid; place-items: center; padding: var(--sp-4); animation: fade var(--t-base) var(--ease); }
+.modal {
+  position: relative; width: min(560px, 100%); max-height: calc(100vh - 2rem); display: flex; flex-direction: column;
+  background: var(--surface); color: var(--text);
+  border: var(--frame) solid var(--chrome); border-radius: var(--r-md);
+  box-shadow: inset 0 0 0 1px var(--chrome-edge), 0 0 0 1px var(--chrome-edge);
+  animation: rise var(--t-base) var(--ease);
+}
+.modal.wide { width: min(820px, 100%); }
+.modal.narrow { width: min(420px, 100%); }
+.modal-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-bottom: 1.5px solid var(--line); }
+.modal-head h2 { font-size: var(--fs-lg); }
+.modal-body { padding: var(--sp-4); overflow-y: auto; }
+.modal-foot { display: flex; justify-content: flex-end; gap: var(--sp-2); flex-wrap: wrap; padding: var(--sp-3) var(--sp-4); border-top: 1.5px solid var(--line); }
+
+.drawer-backdrop { position: fixed; inset: 0; z-index: var(--z-drawer); background: var(--overlay); }
+.drawer { position: fixed; inset-block: 0; inset-inline-start: 0; z-index: calc(var(--z-drawer) + 1); width: min(var(--sidebar-w), 86vw); background: var(--bg-wall); animation: slide-in var(--t-base) var(--ease); }
+@keyframes fade { from { opacity: 0; } }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+@keyframes slide-in { from { transform: translateX(100%); } }
+
+/* ── القوائم المنسدلة ── */
+.dropdown { position: relative; display: inline-block; }
+.menu {
+  /* مكانها بيتحسب في Menu (fixed جوّه body)، وفوق الدرج ولكن تحت النوافذ */
+  position: fixed; z-index: calc(var(--z-drawer) + 1); min-width: 210px; padding: 4px;
+  background: var(--surface); border: var(--frame-sm) solid var(--chrome); box-shadow: inset 0 0 0 1px var(--chrome-edge), 0 0 0 1px var(--chrome-edge); border-radius: var(--r-md);
+}
+.menu button, .menu a { display: flex; align-items: center; gap: var(--sp-2); width: 100%; padding: 9px 12px; background: none; border: 0; border-radius: var(--r-sm); text-align: start; color: var(--text); font-size: var(--fs-sm); }
+.menu button:hover, .menu a:hover { background: var(--surface-strong); text-decoration: none; }
+.menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+
+/* ── التنبيهات المنبثقة: يافطة صغيرة ── */
+.toasts { position: fixed; inset-block-end: var(--sp-4); inset-inline-start: var(--sp-4); z-index: var(--z-toast); display: flex; flex-direction: column; gap: var(--sp-2); width: min(380px, calc(100vw - 2rem)); }
+.toast { display: flex; align-items: flex-start; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-radius: var(--r-sign); background: var(--sign-board); color: var(--sign-text); font-size: var(--fs-sm); animation: rise var(--t-base) var(--ease); }
+.toast.error { border-inline-start: 5px solid var(--leather); }
+.toast.success { border-inline-start: 5px solid #4FA36C; }
+.toast.info { border-inline-start: 5px solid var(--chrome); }
+.toast .btn { color: inherit; }
+
+.loading { display: flex; align-items: center; justify-content: center; gap: var(--sp-3); min-height: 40vh; color: var(--text-muted); }
+
+.panel-title { font-size: var(--fs-lg); font-weight: 600; }
+.panel > .panel-foot { display: flex; justify-content: flex-end; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-top: 1.5px solid var(--line); }

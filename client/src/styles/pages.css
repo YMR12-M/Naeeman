@@ -1,0 +1,112 @@
+/* ═══ صفحات اللوحة ═══ */
+
+/* ── الطابور ── */
+.live-dot { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--text-muted); }
+.live-dot::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--chrome-edge); }
+.live-dot.live::before { background: var(--ok); }
+.live-dot.reconnecting::before { background: var(--warn); animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0.2; } }
+
+.queue-summary { display: flex; flex-wrap: wrap; gap: var(--sp-5); color: var(--text-muted); }
+.queue-summary .num { color: var(--text); font-size: var(--fs-md); }
+
+.board {
+  display: grid; gap: var(--sp-4); align-items: start;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+}
+@media (max-width: 640px) {
+  .board { grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: 86%; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: var(--sp-2); }
+  .board > .lane { scroll-snap-align: start; }
+}
+
+.lane { display: flex; flex-direction: column; min-height: 340px; padding: var(--sp-3); gap: var(--sp-3); }
+.lane-head { display: flex; align-items: center; gap: var(--sp-3); }
+.lane.anyone { background: color-mix(in srgb, var(--surface) 70%, var(--bg)); }
+.anyone-mark { width: 52px; height: 52px; display: grid; place-items: center; border-radius: var(--r-arch) var(--r-arch) var(--r-sm) var(--r-sm); border: var(--frame-sm) dashed var(--chrome-edge); color: var(--text-muted-glass); }
+
+.serving { display: flex; flex-direction: column; gap: var(--sp-1); padding: var(--sp-3); border-radius: var(--r-sm); background: var(--surface-strong); border: 1.5px solid var(--line); }
+.serving.empty-chair { align-items: center; justify-content: center; min-height: 84px; background: transparent; border-style: dashed; }
+.lane-actions { display: flex; gap: var(--sp-2); }
+.lane-list-head { padding-top: var(--sp-1); border-top: 1.5px solid var(--line); }
+.lane-none { padding: var(--sp-2) 0; }
+
+.ticket-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.ticket-line { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) 0; border-bottom: 1px solid var(--line); }
+.ticket-line:last-child { border-bottom: 0; }
+.ticket-line .ticket-number { min-width: 2.4ch; text-align: center; }
+.ticket-line.is-called .ticket-number { color: var(--marker); }
+.ticket-flags { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: var(--fs-sm); }
+
+.absent { padding: var(--sp-3) var(--sp-4); border: 1.5px dashed var(--chrome-edge); border-radius: var(--r-sm); }
+
+/* اختيار الخدمات: سطور قايمة الأسعار بتتدّاس */
+.service-picker { display: flex; flex-direction: column; gap: 4px; }
+.service-pick { display: block; width: 100%; padding: 10px 12px; text-align: start; background: var(--surface-strong); border: 1.5px solid var(--line); border-radius: var(--r-sm); color: var(--text); }
+.service-pick:hover:not(:disabled) { border-color: var(--line-strong); }
+.service-pick.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.service-pick .pick-box { width: 16px; height: 16px; border: 1.5px solid var(--line-strong); border-radius: 3px; display: inline-block; }
+
+/* ── قايمة الأسعار ── */
+.price-board { padding: var(--sp-3) var(--sp-5); }
+.price-list { list-style: none; margin: 0; padding: 0; }
+.price-list li { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-3) 0; border-bottom: 1px solid var(--line); font-size: var(--fs-lg); }
+.price-list li:last-child { border-bottom: 0; }
+.price-list li.is-off { opacity: 0.55; }
+.price-list .price-row .price { font-size: var(--fs-lg); }
+.price-tools { flex: none; }
+.archived-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); max-width: 420px; }
+.archived-list li { padding: var(--sp-2) var(--sp-3); border: 1.5px dashed var(--chrome-edge); border-radius: var(--r-sm); }
+
+/* ── الحلاقين ── */
+.barber-grid { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.barber-card { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); padding: var(--sp-5) var(--sp-3) var(--sp-3); }
+.pin-input { letter-spacing: 0.4em; font-size: var(--fs-xl); text-align: center; }
+
+/* ── المواعيد ── */
+.hours { display: flex; flex-direction: column; }
+.hours-day { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; align-items: center; gap: var(--sp-3); padding: var(--sp-2) 0; border-bottom: 1px solid var(--line); }
+.hours-day:last-child { border-bottom: 0; }
+.hours-periods { display: flex; flex-direction: column; gap: var(--sp-2); }
+.hours-period { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.hours-period .input { width: 130px; min-height: 38px; }
+.hours-tools { display: flex; gap: 4px; }
+@media (max-width: 720px) {
+  .hours-day { grid-template-columns: minmax(0, 1fr) auto; }
+  .hours-periods { grid-column: 1 / -1; }
+}
+
+/* ── الإعدادات ── */
+.settings { max-width: 980px; }
+.shop-link { padding: 6px 10px; background: var(--surface-strong); border: 1.5px solid var(--line); border-radius: var(--r-sm); font-size: var(--fs-sm); word-break: break-all; }
+
+/* ── الأجهزة ── */
+.device-types { display: grid; gap: var(--sp-2); grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 560px) { .device-types { grid-template-columns: minmax(0, 1fr); } }
+.device-type { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: var(--sp-3); text-align: center; background: var(--surface-strong); border: 1.5px solid var(--line); border-radius: var(--r-sm); color: var(--text); }
+.device-type.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.pairing { align-items: center; }
+.pairing-code { padding: var(--sp-5) var(--sp-6) var(--sp-3); letter-spacing: 0.08em; }
+
+/* ── النهارده ── */
+.today { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start; }
+.revenue { display: flex; flex-direction: column; align-items: center; gap: var(--sp-1); padding: var(--sp-6) var(--sp-4) var(--sp-4); text-align: center; }
+.ledger-line .price { font-weight: 600; }
+.barber-day { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.barber-day li { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) 0; border-bottom: 1px solid var(--line); }
+.barber-day li:last-child { border-bottom: 0; }
+
+.temp-pass { padding: var(--sp-3) var(--sp-5); font-size: var(--fs-xl); }
+.not-found { max-width: 360px; margin: var(--sp-7) auto; padding: var(--sp-7) var(--sp-4) var(--sp-5); display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); font-size: var(--fs-xl); }
+
+/* ── التجهيز لأوّل مرّة ── */
+.setup { max-width: 860px; }
+.setup-step { padding: 0; }
+.setup-step-head { display: flex; align-items: center; gap: var(--sp-3); width: 100%; padding: var(--sp-3) var(--sp-4); background: none; border: 0; text-align: start; color: var(--text); font-size: var(--fs-lg); }
+.setup-number { font-size: 1.8rem; min-width: 1.4ch; text-align: center; }
+.setup-step-body { padding: 0 var(--sp-4) var(--sp-4); }
+.setup-services, .setup-barbers { display: grid; gap: var(--sp-2); align-items: center; }
+.setup-services { grid-template-columns: 28px minmax(0, 1fr) 110px 90px; }
+.setup-service { display: contents; }
+.setup-service.is-off .input { opacity: 0.45; }
+.setup-barbers { grid-template-columns: minmax(0, 1fr) 90px 110px; }
+.setup-barber { display: contents; }

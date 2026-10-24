@@ -1,0 +1,90 @@
+/* ═══ شاشات الأجهزة: التلفزيون والكشك والكرسي ═══
+   أرضيتها الحيطة النعناعي (مش البلاط)، وبالنهار دايمًا، ولمسات كبيرة. */
+html.device-screen body { background-color: var(--wall); background-image: none; }
+
+/* ── الربط ── */
+.device-pairing { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-5); padding: var(--sp-5); }
+.pair-mirror { width: min(440px, 100%); padding: var(--sp-7) var(--sp-5) var(--sp-5); }
+.pair-input { font-family: var(--font-number); font-size: 2.6rem; min-height: 72px; text-align: center; letter-spacing: 0.25em; }
+
+/* ═══ التلفزيون ═══ */
+.tv { --tv-number: clamp(5rem, 11vw, 12rem); min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; }
+.tv-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-5); padding: 2vh 3vw 0; }
+.tv-head .sign { font-size: clamp(1.8rem, 3.2vw, 3.4rem); }
+.tv-head-side { display: flex; align-items: center; gap: var(--sp-5); }
+.tv-wait { font-size: clamp(1rem, 1.8vw, 1.8rem); font-weight: 600; }
+.tv-wall { display: grid; grid-template-columns: minmax(0, 1fr) clamp(220px, 24vw, 420px); gap: 2.5vw; padding: 3vh 3vw; align-items: stretch; }
+.tv-mirrors { display: grid; grid-template-columns: repeat(var(--count), minmax(0, 1fr)); gap: 2vw; align-items: end; }
+.tv-barber { display: flex; flex-direction: column; align-items: center; gap: 1.6vh; min-width: 0; }
+.tv-barber .sign { font-size: clamp(1rem, 1.7vw, 1.8rem); max-width: 100%; }
+.tv-mirror { width: 100%; min-height: 46vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1vh; padding: 6vh 1vw 3vh; border-width: 7px; }
+.tv-name { font-size: clamp(1.1rem, 2vw, 2.2rem); font-weight: 600; }
+.tv-note { font-size: clamp(1.2rem, 2.2vw, 2.4rem); }
+.tv-next { display: flex; flex-direction: column; gap: 1.4vh; padding: 3vh 1.6vw; border-width: 7px; }
+.tv-next-title { font-weight: 600; font-size: clamp(1rem, 1.6vw, 1.7rem); color: var(--text-muted-glass); }
+.tv-next ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1.2vh; }
+.tv-next li .marker { font-size: clamp(1.3rem, 2.4vw, 2.6rem); }
+.tv-next li.called .marker { color: var(--leather); }
+.tv-more { color: var(--text-muted-glass); font-size: clamp(0.9rem, 1.4vw, 1.4rem); }
+.tv-floor { display: flex; align-items: center; justify-content: space-between; gap: 3vw; padding: 2vh 3vw; }
+.tv-qr { display: flex; align-items: center; gap: 1.2vw; font-size: clamp(0.95rem, 1.5vw, 1.6rem); font-weight: 600; }
+.tv-qr .qr { display: block; width: clamp(80px, 9vw, 150px); padding: 8px; background: var(--glass); border: 4px solid var(--chrome); box-shadow: 0 0 0 1px var(--chrome-edge); border-radius: var(--r-sm); }
+.tv-qr .qr svg { width: 100%; height: auto; }
+.tv-code { font-family: var(--font-number); font-size: 1.4em; color: var(--ink); }
+.tv-brand { color: var(--ink); font-size: clamp(1rem, 1.8vw, 2rem); }
+@media (max-width: 900px) and (orientation: portrait) {
+  .tv-wall { grid-template-columns: minmax(0, 1fr); }
+  .tv-mirror { min-height: 30vh; }
+}
+
+/* ═══ تابلت الباب ═══ */
+.kiosk { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; gap: var(--sp-4); padding: var(--sp-4) var(--sp-5) 0; }
+.kiosk-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap; }
+.kiosk-steps { display: flex; gap: var(--sp-2); list-style: none; margin: 0; padding: 0; }
+.kiosk-steps li { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--r-sign); font-weight: 600; color: var(--ink-mute); }
+.kiosk-steps li .num { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid currentColor; }
+.kiosk-steps li.on { background: var(--ink); color: var(--cream); }
+.kiosk-steps li.done { color: var(--ok); }
+.kiosk-panel { width: min(860px, 100%); justify-self: center; align-self: start; padding: var(--sp-5); }
+.kiosk-title { font-size: clamp(1.6rem, 3vw, 2.2rem); }
+.kiosk-services { display: flex; flex-direction: column; gap: var(--sp-2); }
+.kiosk-service { padding: 18px 20px; font-size: 1.35rem; text-align: start; background: var(--surface-strong); border: 2px solid var(--line); border-radius: var(--r-md); color: var(--text); }
+.kiosk-service.on { border-color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+.kiosk-service .pick-box { width: 22px; height: 22px; border: 2px solid var(--line-strong); border-radius: 4px; display: inline-block; }
+.kiosk-barbers { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.kiosk-barber { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: var(--sp-4) var(--sp-3); background: var(--surface-strong); border: 2px solid var(--line); border-radius: var(--r-md); color: var(--text); font-size: 1.15rem; }
+.kiosk-barber.on { border-color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+.kiosk-input { min-height: 64px; font-size: 1.5rem; }
+.kiosk-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding-top: var(--sp-3); }
+.kiosk-foot .leather { min-height: 64px; padding: 0 var(--sp-7); font-size: 1.35rem; }
+.kiosk-center { width: min(560px, 100%); justify-self: center; align-self: center; display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); padding: 10vh var(--sp-5) var(--sp-6); text-align: center; }
+.kiosk-big-note { font-size: clamp(1.4rem, 3vw, 2rem); }
+.kiosk-floor { height: 56px; margin: 0 calc(var(--sp-5) * -1); }
+
+/* ═══ تابلت الكرسي ═══ */
+.chair { min-height: 100vh; display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-4) var(--sp-4) 0; }
+.chair-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
+.chair-elapsed { font-size: 1.5rem; }
+.chair-mirrors { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--sp-4); }
+@media (max-width: 640px) { .chair-mirrors { grid-template-columns: minmax(0, 1fr); } }
+.chair-now, .chair-next { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-4); }
+.chair-customer { font-size: 1.6rem; font-weight: 600; }
+.chair-empty { font-size: 1.8rem; padding: var(--sp-4) 0; }
+.chair-next-line { font-size: 1.3rem; }
+.chair .leather.giant { flex: 1 0 34vh; }
+.chair-floor { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); margin: 0 calc(var(--sp-4) * -1); }
+.chair-floor .btn { min-height: 64px; font-size: 1.1rem; }
+@media (max-width: 560px) { .chair-floor { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.chair-signin { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-5); padding: var(--sp-5); }
+.chair-title { font-size: clamp(1.6rem, 3.4vw, 2.4rem); text-align: center; }
+.chair-names { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); width: min(900px, 100%); }
+.chair-name { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); padding: var(--sp-5) var(--sp-3); background: var(--glass); border: var(--frame) solid var(--chrome); box-shadow: inset 0 0 0 1px var(--chrome-edge), 0 0 0 1px var(--chrome-edge); border-radius: var(--r-arch) var(--r-arch) var(--r-md) var(--r-md); color: var(--text); font-size: 1.2rem; }
+.chair-name:disabled { opacity: 0.5; }
+.pin-dots { display: flex; gap: var(--sp-4); }
+.pin-dots span { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid var(--ink); }
+.pin-dots span.on { background: var(--ink); }
+.pin-pad { display: grid; grid-template-columns: repeat(3, 96px); gap: var(--sp-3); }
+.pin-key { height: 96px; font-family: var(--font-number); font-size: 2.6rem; background: var(--glass); color: var(--ink); border: var(--frame-sm) solid var(--chrome); box-shadow: inset 0 0 0 1px var(--chrome-edge), 0 0 0 1px var(--chrome-edge); border-radius: var(--r-md); display: grid; place-items: center; }
+.pin-key:active { transform: translateY(2px); }
+.pin-key.ghost { background: transparent; border-color: transparent; box-shadow: none; }

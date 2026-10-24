@@ -1,0 +1,32 @@
+{
+  "name": "@naeeman/client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "نعيمًا — لوحة المحل وشاشات التلفزيون والكشك والكرسي (React + Vite)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4200",
+    "test": "vitest run",
+    "check:contrast": "node scripts/check-contrast.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/playpen-sans-arabic": "^5.3.0",
+    "@fontsource-variable/readex-pro": "^5.3.0",
+    "@fontsource/aref-ruqaa-ink": "^5.3.0",
+    "@tanstack/react-query": "^5.104.1",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.18.4"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "jsdom": "^29.1.1",
+    "vite": "^6.4.3",
+    "vitest": "^3.2.7"
+  }
+}
