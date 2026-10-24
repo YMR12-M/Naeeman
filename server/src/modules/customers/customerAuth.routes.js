@@ -30,6 +30,11 @@ const loginSchema = z.object({ phone: phoneSchema, password: z.string().min(1).m
 const refreshSchema = z.object({ refresh_token: z.string().min(20).max(300).optional() });
 const forgotSchema = z.object({ phone: phoneSchema });
 const resetSchema = z.object({ token: z.string().min(20).max(300), new_password: customerPasswordSchema });
+const shopCodeResetSchema = z.object({
+  phone: phoneSchema,
+  code: z.string().trim().regex(/^\d{6}$/, 'الكود 6 أرقام'),
+  new_password: customerPasswordSchema,
+}).strict();
 
 const cookieOptions = (expires) => ({
   httpOnly: true,
@@ -95,6 +100,12 @@ router.post('/forgot-password', passwordResetLimiter, validate({ body: forgotSch
 
 router.post('/reset-password', passwordResetLimiter, validate({ body: resetSchema }), asyncHandler(async (req, res) => {
   await service.resetPassword(req.body);
+  ok(res, { message: 'كلمة السر اتغيّرت — سجّل الدخول' });
+}));
+
+/** بالكود اللي الاستقبال طلّعه في المحل (للزبون اللي مالوش بريد) */
+router.post('/reset-with-code', passwordResetLimiter, validate({ body: shopCodeResetSchema }), asyncHandler(async (req, res) => {
+  await service.resetWithShopCode(req.body);
   ok(res, { message: 'كلمة السر اتغيّرت — سجّل الدخول' });
 }));
 

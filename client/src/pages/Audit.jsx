@@ -33,6 +33,7 @@ const ACTIONS = {
   'device.pairing_code': 'طلّع كود ربط جهاز',
   'device.revoke': 'لغى جهاز',
   'queue.move': 'حرّك دور في الطابور',
+  'customer.recovery_code': 'طلّع كود استعادة لزبون',
 };
 
 function describe(row) {

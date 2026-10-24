@@ -30,6 +30,23 @@ describe('فاتح دلوقتي؟', () => {
     assert.equal(shopStatusAt(hours, TZ, cairo('2026-10-24T03:00:00')).open, false);
   });
 
+  test('فترات ورا بعض من غير فاصل: المحل ما بيقفلش في النص', () => {
+    // فاتح 24 ساعة كل يوم ما عدا الجمعة: يقفل أوّل الجمعة بس
+    const allDay = daily('00:00', '00:00').filter((period) => period.weekday !== 5);
+    const wednesdayNight = shopStatusAt(allDay, TZ, cairo('2026-10-21T23:30:00'));
+    assert.equal(wednesdayNight.open, true);
+    assert.equal(wednesdayNight.businessDate, '2026-10-21', 'يوم الشغل نفسه زي ما هو');
+    assert.equal(wednesdayNight.closesAt.toISOString(), '2026-10-22T21:00:00.000Z');
+
+    // بيقفل 12 بالليل ويفتح من 12 بالليل لحد 3 الفجر
+    const chained = [
+      ...daily('12:00', '00:00').map((period) => ({ ...period })),
+      ...daily('00:00', '03:00'),
+    ];
+    const lateEvening = shopStatusAt(chained, TZ, cairo('2026-10-23T23:00:00'));
+    assert.equal(lateEvening.closesAt.toISOString(), '2026-10-24T00:00:00.000Z');
+  });
+
   test('قافل: إمتى بيفتح؟ حتى لو بعد إجازة', () => {
     // الجمعة إجازة، الشغل من السبت
     const hours = daily('10:00', '22:00').filter((period) => period.weekday !== 5);

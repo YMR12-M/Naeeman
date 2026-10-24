@@ -9,6 +9,7 @@ import queueRoutes from '../modules/queue/queue.routes.js';
 import reportRoutes from '../modules/reports/reports.routes.js';
 import customerAuthRoutes from '../modules/customers/customerAuth.routes.js';
 import meRoutes from '../modules/customers/me.routes.js';
+import customerSupportRoutes from '../modules/customers/customerSupport.routes.js';
 import publicRoutes from '../modules/public/public.routes.js';
 import deviceRoutes from '../modules/devices/devices.routes.js';
 import displayRoutes from '../modules/devices/display.routes.js';
@@ -30,6 +31,7 @@ router.use('/reports', reportRoutes);
 // الزبون (توكن بجمهور مختلف عن الموظفين)
 router.use('/customer-auth', customerAuthRoutes);
 router.use('/me', meRoutes);
+router.use('/customers', customerSupportRoutes);
 
 // أجهزة المحل (ربطها بكود، وبعدها ترويسة X-Device-Token)
 router.use('/devices', deviceRoutes);

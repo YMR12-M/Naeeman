@@ -1,0 +1,118 @@
+/* ═══════════════════════════════════════════════════════════════
+   «صالون زمان» — الألوان والخطوط والأحجام
+   كل لون اسمه حاجة حقيقية في المحل (docs/DESIGN_SYSTEM.md قسم 3).
+   المكوّنات بتقرا الأدوار (--bg، --text، --surface …) مش القيم.
+   التباين بيتقاس بـ `npm run check:contrast`.
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  color-scheme: light;
+
+  /* ── المحل نفسه ── */
+  --wall: #A9D6C4;          /* دهان الحيطة النعناعي */
+  --ink: #143C38;           /* أخضر اليافطة الغامق */
+  --ink-mute: #2F5650;      /* النص الثانوي على الحيطة */
+  --glass: #E9F1EE;         /* زجاج المراية */
+  --ink-mute-glass: #46605B;/* النص الثانوي جوّه المراية */
+  --chrome: #B9BFC4;        /* إطار المراية */
+  --chrome-edge: #5E676E;   /* الحافة الغامقة جوّه الإطار */
+  --tile: #F4F3EC;          /* البلاط */
+  --tile-grout: #D5D9D2;    /* العراميس */
+  --cream: #F3EBDD;         /* دهان كلام اليافطة */
+  --leather: #8E1F1B;       /* جلد الكرسي */
+  --leather-press: #741814;
+  --stitch: #E3B9A6;        /* خيط الجلد */
+  --marker: #1F3F8A;        /* ماركر أزرق على المراية */
+  --ok: #1E6B3A;
+  --danger: #9B1C1C;
+  --warn: #7A4A00;
+
+  /* ── الأدوار ── */
+  --bg: var(--tile);
+  --bg-wall: var(--wall);
+  --surface: var(--glass);
+  --surface-strong: #FFFFFF;
+  --text: var(--ink);
+  --text-muted: var(--ink-mute);
+  --text-muted-glass: var(--ink-mute-glass);
+  --line: #C9D2CD;
+  --line-strong: var(--chrome-edge);
+  --sign-board: var(--ink);
+  --sign-text: var(--cream);
+  --sign-line: var(--cream);
+  --on-leather: var(--cream);
+  --ok-soft: #DCEFE2;
+  --danger-soft: #F6DEDC;
+  --warn-soft: #F5E8CC;
+  --marker-soft: #DCE4F5;
+  --overlay: rgba(10, 30, 28, 0.55);
+  --ring: 0 0 0 3px rgba(31, 63, 138, 0.45);
+
+  /* ── الخطوط: اليافطة والماركر والكلام ── */
+  --font: 'Readex Pro Variable', 'Readex Pro', 'Segoe UI', Tahoma, sans-serif;
+  --font-sign: 'Aref Ruqaa Ink', 'Readex Pro Variable', serif;
+  --font-marker: 'Playpen Sans Arabic Variable', 'Readex Pro Variable', cursive;
+  /* الأرقام الكبيرة بـ Readex تقيل: صفر الرقعة بيتقري «٥» (يعني 10 تبان 15) — اتجرّب في المتصفّح */
+  --font-number: var(--font);
+
+  --fs-xs: 0.78rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.15rem;
+  --fs-xl: 1.4rem;
+  --fs-2xl: 1.8rem;
+  --lh: 1.65;
+
+  /* ── المسافات والأحجام ── */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-7: 48px;
+  --r-sign: 3px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-arch: 999px;
+  --frame: 5px;
+  --frame-sm: 3px;
+  --tile-size: 24px;
+  --touch: 44px;
+  --sidebar-w: 248px;
+
+  --t-fast: 120ms;
+  --t-base: 200ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  --z-sticky: 10; --z-drawer: 40; --z-modal: 50; --z-toast: 60;
+}
+
+/* ═══ «المحل بالليل»: بعد ما يقفل، ولمبة نيون واحدة ═══ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --wall: #0F2B28;
+  --ink: #E4EEE9;
+  --ink-mute: #A9C2BC;
+  --glass: #1A3B37;
+  --ink-mute-glass: #A9C2BC;
+  --chrome: #6F7880;
+  --chrome-edge: #9AA3AA;
+  --tile: #22302E;
+  --tile-grout: #33433F;
+  --cream: #F6EEE2;
+  --leather: #A3302A;
+  --leather-press: #8A2721;
+  --stitch: #E8B4A2;
+  --marker: #A9C1F5;
+  --ok: #8FD6A6;
+  --danger: #F2A39A;
+  --warn: #F0C987;
+
+  --surface-strong: #22423E;
+  --line: #2C4642;
+  --sign-board: #E3D7BF;      /* اليافطة بتتقلب: لوح كريمي منوّر من ورا */
+  --sign-text: #143C38;
+  --sign-line: #143C38;
+  --ok-soft: #173A27;
+  --danger-soft: #4A1D1A;
+  --warn-soft: #3E2E10;
+  --marker-soft: #1E2F55;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --ring: 0 0 0 3px rgba(169, 193, 245, 0.55);
+}

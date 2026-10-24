@@ -28,6 +28,7 @@ import {
 import {
   LeatherButton, MarkerNote, Mirror, OpenSign, Portrait, PriceRow, Sign, TicketNumber,
 } from '../components/brand/index.jsx';
+import RecoveryCodeModal from '../components/shop/RecoveryCodeModal.jsx';
 
 const errorText = (error) => error?.message ?? 'حصل خطأ غير متوقّع';
 
@@ -350,6 +351,7 @@ export default function Queue() {
   const live = useLive({ path: '/queue/stream', load: () => api.get('/queue') });
   const services = useQuery({ queryKey: ['services'], queryFn: () => api.get('/services') });
   const [walkIn, setWalkIn] = useState(false);
+  const [recovery, setRecovery] = useState(false);
   const [dialog, setDialog] = useState(null);
   const [busy, setBusy] = useState(null);
 
@@ -427,6 +429,9 @@ export default function Queue() {
             <Switch checked={queue.accepting_tickets} onChange={toggleAccepting} label="بياخد أدوار" disabled={busy === 'accepting'} />
           )}
           {can('queue.write') && (
+            <Button variant="ghost" icon="key" onClick={() => setRecovery(true)}>زبون نسي كلمة السر</Button>
+          )}
+          {can('queue.write') && (
             <LeatherButton onClick={() => setWalkIn(true)} disabled={activeServices.length === 0}>
               <Icon name="user-plus" size={18} />زبون من الشارع
             </LeatherButton>
@@ -496,6 +501,7 @@ export default function Queue() {
         </div>
       )}
 
+      <RecoveryCodeModal open={recovery} onClose={() => setRecovery(false)} />
       <WalkInModal open={walkIn} onClose={() => setWalkIn(false)} services={activeServices} barbers={present.filter((barber) => barber.status !== 'off')} onDone={live.refresh} />
       {dialog?.kind === 'assign' && <AssignModal ticket={dialog.ticket} barbers={present.filter((barber) => barber.status !== 'off')} onClose={() => setDialog(null)} onDone={live.refresh} />}
       {dialog?.kind === 'service' && <AddServiceModal ticket={dialog.ticket} services={activeServices} onClose={() => setDialog(null)} onDone={live.refresh} />}

@@ -6,8 +6,9 @@
  *  السرقة + قفل بعد محاولات فاشلة + رسالة واحدة لأي فشل)، بس في جداول
  *  منفصلة وبجمهور توكن مختلف: توكن الزبون ما يفتحش أي مسار موظفين.
  *
- *  مفيش SMS: استعادة كلمة السر بالبريد لو الزبون حطّه، وإلا من المحل
- *  (مرحلة جاية). الرد على «نسيت» واحد دايمًا، فما بيكشفش مين مسجّل.
+ *  مفيش SMS: استعادة كلمة السر بالبريد لو الزبون حطّه، وإلا بكود من 6
+ *  أرقام بيطلّعه الاستقبال في المحل. الرد على «نسيت» واحد دايمًا، فما
+ *  بيكشفش مين مسجّل.
  * ═══════════════════════════════════════════════════════════════
  */
 import crypto from 'node:crypto';
@@ -22,6 +23,11 @@ import { enqueueEmail } from '../../services/notifications/outbox.js';
 
 const BAD_CREDENTIALS = 'رقم الموبايل أو كلمة السر غلط';
 const REUSE_GRACE_MS = 10_000;
+const SHOP_CODE_MINUTES = 15;
+const SHOP_CODE_ATTEMPTS = 5;
+
+/** بصمة كود المحل مربوطة برقم الطلب: نفس الكود لطلب تاني بصمته مختلفة */
+const shopCodeHash = (requestId, code) => sha256(`shop-reset:${requestId}:${code}`);
 
 export const loadCustomer = (customerId) => queryOne(
   'SELECT id, uuid, name, phone, email, status, created_at FROM customers WHERE id = ?',
@@ -212,6 +218,57 @@ export const customerAuthService = {
       [sha256(token)],
     );
     if (!record) throw ApiError.badRequest('الرابط غير صالح أو انتهت صلاحيته — اطلب رابط جديد', { code: 'RESET_INVALID' });
+    const passwordHash = await hashPassword(next);
+    await transaction(async (tx) => {
+      await tx.execute(
+        'UPDATE customers SET password_hash = ?, failed_logins = 0, locked_until = NULL WHERE id = ?',
+        [passwordHash, record.customer_id],
+      );
+      await tx.execute('UPDATE customer_password_resets SET used_at = NOW() WHERE id = ?', [record.id]);
+      await tx.execute('UPDATE customer_refresh_tokens SET revoked_at = NOW() WHERE customer_id = ? AND revoked_at IS NULL', [record.customer_id]);
+    });
+  },
+
+  /**
+   * كود استعادة من المحل (للزبون اللي مالوش بريد): الاستقبال بيطلّعه وهو
+   * شايف الزبون قدّامه. أي كود قديم مش مستعمل بيتلغي.
+   */
+  async issueShopCode(phone, issuedBy) {
+    const customer = await queryOne("SELECT id, name, phone FROM customers WHERE phone = ? AND status = 'active'", [phone]);
+    if (!customer) throw ApiError.notFound('مفيش حساب زبون بالرقم ده', { code: 'CUSTOMER_NOT_FOUND' });
+    const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+    await transaction(async (tx) => {
+      await tx.execute('UPDATE customer_password_resets SET used_at = NOW() WHERE customer_id = ? AND used_at IS NULL', [customer.id]);
+      const inserted = await tx.execute(
+        `INSERT INTO customer_password_resets (customer_id, kind, token_hash, expires_at, issued_by)
+         VALUES (?, 'shop', ?, DATE_ADD(NOW(), INTERVAL ? MINUTE), ?)`,
+        [customer.id, sha256(randomToken(32)), SHOP_CODE_MINUTES, issuedBy],
+      );
+      await tx.execute('UPDATE customer_password_resets SET code_hash = ? WHERE id = ?', [shopCodeHash(inserted.insertId, code), inserted.insertId]);
+    });
+    return { customer: { id: customer.id, name: customer.name, phone: customer.phone }, code, expires_in_minutes: SHOP_CODE_MINUTES };
+  },
+
+  async resetWithShopCode({ phone, code, new_password: next }) {
+    const invalid = () => ApiError.badRequest('الكود غلط أو انتهى — اطلب كود جديد من المحل', { code: 'RESET_INVALID' });
+    const record = await queryOne(
+      `SELECT r.id, r.customer_id, r.code_hash, r.attempts
+         FROM customer_password_resets r JOIN customers c ON c.id = r.customer_id
+        WHERE c.phone = ? AND c.status = 'active' AND r.kind = 'shop' AND r.used_at IS NULL AND r.expires_at > NOW()
+        ORDER BY r.id DESC LIMIT 1`,
+      [phone],
+    );
+    if (!record || !record.code_hash) throw invalid();
+    const expected = Buffer.from(record.code_hash, 'hex');
+    const actual = Buffer.from(shopCodeHash(record.id, code), 'hex');
+    if (!crypto.timingSafeEqual(expected, actual)) {
+      // بعد آخر محاولة الكود بيتحرق، والزبون يرجع للمحل
+      await execute(
+        'UPDATE customer_password_resets SET attempts = attempts + 1, used_at = IF(attempts + 1 >= ?, NOW(), used_at) WHERE id = ?',
+        [SHOP_CODE_ATTEMPTS, record.id],
+      );
+      throw invalid();
+    }
     const passwordHash = await hashPassword(next);
     await transaction(async (tx) => {
       await tx.execute(

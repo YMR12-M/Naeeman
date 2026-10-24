@@ -7,12 +7,12 @@ import { inputToMinor, minorToInput } from '../../lib/format.js';
 import { Icon } from '../../lib/icons.jsx';
 
 export const Button = forwardRef(function Button(
-  { variant = 'secondary', size, icon, loading = false, block = false, children, className = '', type = 'button', ...rest },
+  { variant = 'secondary', size, icon, loading = false, disabled = false, block = false, children, className = '', type = 'button', ...rest },
   ref,
 ) {
   const classes = ['btn', variant, size, block && 'block', icon && !children && 'icon', className].filter(Boolean).join(' ');
   return (
-    <button ref={ref} type={type} className={classes} disabled={rest.disabled || loading} {...rest}>
+    <button ref={ref} type={type} className={classes} disabled={disabled || loading} aria-busy={loading || undefined} {...rest}>
       {loading ? <span className="spinner" aria-hidden="true" /> : icon && <Icon name={icon} size={size === 'sm' ? 16 : 18} />}
       {children}
     </button>

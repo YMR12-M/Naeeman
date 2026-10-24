@@ -57,9 +57,24 @@ export function shopStatusAt(hours, timeZone, now = new Date()) {
   return {
     open: Boolean(current),
     businessDate: current?.businessDate ?? null,
-    closesAt: current?.end ?? null,
+    closesAt: current ? closingOf(periods, current) : null,
     nextOpensAt: next?.start ?? null,
   };
+}
+
+/**
+ * إمتى المحل هيقفل فعلًا: لو فترة بتبدأ ساعة ما اللي قبلها بتخلص (فاتح 24
+ * ساعة، أو بيقفل 12 بالليل ويفتح 12 بالليل)، المحل ما بيقفلش في النص.
+ * من غير كده محل فاتح طول الأسبوع كان بيرفض الأدوار قبل نص الليل
+ * («المحل هيقفل قبل دورك»). يوم الشغل نفسه ما بيتغيّرش (الترقيم بيبدأ من 1).
+ */
+function closingOf(periods, current) {
+  let end = current.end;
+  for (const period of periods) {
+    if (period.start > end) break;
+    if (period.end > end) end = period.end;
+  }
+  return end;
 }
 
 /**
