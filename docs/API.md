@@ -52,6 +52,42 @@
 | GET | `/audit` | `audit.read` |
 | POST | `/customers/recovery-code` `{ phone }` | `queue.write` |
 
+### الكاشير والمخزن والحساب والكروت (المرحلة التانية)
+المال بالقروش. الفاتورة هي مصدر الحقيقة للفلوس (التفاصيل في [`PLAN-2.md`](PLAN-2.md)).
+
+| | المسار | الصلاحية |
+|---|---|---|
+| GET · POST | `/bills?status=&q=&date=` · `/bills` (بيع من غير دور) · POST `/bills/for-ticket/:ticketId` | `billing.use` |
+| GET | `/bills/:id` · `/bills/:id/receipt` (بيانات الإيصال) | `billing.use` |
+| POST · DELETE | `/bills/:id/items` · `/bills/:id/items/:itemId` | `billing.use` |
+| POST | `/bills/:id/checkout` `{ payments:[{method,amount,tendered?,reference?}], tip?, discount?, discount_reason?, redeem_reward? }` (ذرّي) | `billing.use` (الخصم بحدّ للاستقبال، `billing.discount` من غير حد) |
+| POST | `/bills/:id/void` `{ reason }` · `/bills/:id/refund` `{ amount, method, reason, restock?: [{ item_id, qty }] }` | `billing.use` · `billing.refund` |
+| GET · POST · PATCH | `/payment-methods` | `billing.use` · `payments.manage` |
+| GET | `/drawer/current` · `/drawer/sessions` · `/drawer/sessions/:id` | `billing.use` |
+| POST | `/drawer/open` `{ opening_float }` · `/drawer/close` `{ counted_cash, note? }` | `billing.use` |
+| POST | `/drawer/movements` `{ type: expense\|advance\|cash_in\|cash_out, amount, note?, barber_id? }` (صرف الحساب بيتسجّل من `/payroll/settlements`) | `drawer.expense` (السلفة `drawer.advance`) |
+| GET · POST | `/day-close/preview` · `/day-close` `{ note? }` · GET `/day-close` · `/day-close/:id` | `dayclose.close` |
+| GET · POST · PATCH · DELETE | `/products` · `/products/lookup?barcode=` · `/products/:id` · POST `/products/:id/restore` | `products.read` · `products.write` |
+| POST · GET | `/products/:id/stock` `{ type: purchase\|use\|adjust, qty \| counted_qty, unit_cost?, note? }` · `/products/:id/movements` | `stock.write` · `products.read` |
+| GET · PUT | `/payroll/barbers` · `/payroll/barbers/:id` (إعدادات الحساب) | `payroll.read` · `payroll.write` |
+| GET | `/payroll/preview?barber_id=&to=` · `/payroll/settlements` · `/payroll/settlements/:id` | `payroll.read` |
+| POST | `/payroll/settlements` `{ barber_id, to?, via: drawer\|outside, note? }` | `payroll.write` |
+| GET | `/cards?q=` · `/cards/:id` · `/cards/reminders` (وحشونا) | `cards.read` |
+| PATCH | `/cards/:id` `{ name?, notes?, reminders_off? }` · POST `/cards/:id/reminded` | `cards.write` |
+| POST | `/cards/:id/stamps` `{ delta, note }` (تعديل يدوي) | `cards.stamps` |
+| GET | `/cards/:id/photos/:photoId` (الصورة، بتوكن) | `cards.read` |
+| POST · DELETE | `/cards/:id/photos` (صورة خام: `Content-Type: image/jpeg\|png\|webp`) · `/cards/:id/photos/:photoId` | `cards.write` |
+| GET | `/reports/today?date=` (من الفواتير: طرق الدفع والمنتجات) · `/reports/range?from=&to=` | `reports.read` |
+
+### المحل هو السيرفر — `/hub` (المالك، `hub.manage`)
+| | المسار | |
+|---|---|---|
+| GET | `/hub` | `{ enabled, addresses, api_port, customer_port, serves_panel, serves_customer, backup }`. برّه وضع المحل `enabled=false` |
+| GET · POST | `/hub/backups` | قايمة النسخ (من غير مسارات الجهاز) · نسخة دلوقتي |
+| POST | `/hub/backups/restore` `{ name, confirm: true }` | بيعمل نسخة أمان من الحالة الحالية، وبعدين بيمسح ويرجّع النسخة |
+
+برّه وضع المحل (`HUB_MODE`) مسارات النسخ بترد `409 HUB_ONLY`.
+
 ### الطابور (موظفين)
 | | المسار | الصلاحية |
 |---|---|---|
@@ -73,6 +109,8 @@
 | GET | `/me/tickets` (السجل) · `/me/tickets/active` · `/me/tickets/:id` | |
 | POST | `/me/tickets` `{ shop_slug, service_ids, barber_id? }` | خُد دور |
 | POST | `/me/tickets/:id/coming` · `/delay` · `/cancel` · `/check-in` `{ code }` | |
+| GET · PATCH | `/me/cards` (كروت الأختام في كل محل زاره) · `/me/cards/:shopId` `{ reminders_off }` | بيظهر الكارت بعد أوّل دور بالتطبيق في المحل |
+| GET · DELETE | `/me/photos` · `/me/photos/:id` (قصّاته، وبيمسحها) | الصورة بتوكنه هو بس |
 | GET | `/me/stream` (SSE) | الدور الشغّال لايف |
 
 ### الأجهزة
@@ -83,6 +121,7 @@
 | GET · POST | `/kiosk/options` · `/kiosk/tickets` · `/kiosk/tickets/:id/cancel` | تابلت الباب |
 | GET · POST | `/chair/barbers` · `/chair/login` `{ barber_id, pin }` · `/chair/logout` | تابلت الكرسي |
 | GET · POST | `/chair/queue` · `/chair/stream` · `/chair/next` · `/chair/finish` · `/chair/services` · `/chair/status` | الحلاق اللي داخل |
+| POST · GET | `/chair/photo?ticket_id=` (صورة قصّة خام) · `/chair/photos/:id` | اللي على الكرسي أو اللي خلص من أقل من نص ساعة، وليه كارت |
 
 ### عام (من غير حساب)
 | | المسار | |
