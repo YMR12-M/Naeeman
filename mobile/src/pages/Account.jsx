@@ -3,16 +3,18 @@
  * وتغيير كلمة السر، والإشعارات، وشكل التطبيق، والخروج.
  */
 import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
 import { useForm } from '../lib/forms.js';
 import { useDocumentTitle } from '../lib/hooks.js';
-import { formatPhone } from '../lib/format.js';
+import { formatDate, formatPhone } from '../lib/format.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { Mirror } from '../components/brand/index.jsx';
-import { Button, Field, Input, Notice, Segmented, useConfirm } from '../components/ui/index.js';
+import { Button, Field, Input, Notice, Segmented, Switch, useConfirm } from '../components/ui/index.js';
 import PushPrompt from '../components/PushPrompt.jsx';
+import { AuthImage, LoyaltyNote, StampRow } from '../components/CardBits.jsx';
 
 function Profile() {
   const { customer, setCustomer } = useAuth();
@@ -48,6 +50,80 @@ function Profile() {
       </Field>
       <Button type="submit" variant="primary" loading={busy}>حفظ</Button>
     </form>
+  );
+}
+
+/** كروت الأختام في كل محل زرته، ومفتاح «فكّرني لو غبت» لكل محل */
+function MyCards() {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const cards = useQuery({ queryKey: ['cards'], queryFn: () => api.get('/me/cards') });
+  const remind = useMutation({
+    mutationFn: ({ shopId, off }) => api.patch(`/me/cards/${shopId}`, { reminders_off: off }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cards'] }),
+    onError: (failure) => toast.error(failure.message),
+  });
+
+  if (!cards.data || cards.data.length === 0) return null;
+  return (
+    <Mirror className="page-card stack">
+      <h2>كروتي</h2>
+      {cards.data.map((card) => (
+        <div key={card.id} className="stack sm my-card">
+          <div className="row between">
+            <span className="bold">{card.shop_name}</span>
+            <span className="xsmall muted">زرت <span className="num">{card.visits}</span> {card.visits === 1 ? 'مرّة' : 'مرّات'}</span>
+          </div>
+          <StampRow loyalty={card.loyalty} size="sm" />
+          <LoyaltyNote loyalty={card.loyalty} />
+          <Switch
+            checked={!card.reminders_off}
+            disabled={remind.isPending}
+            onChange={(on) => remind.mutate({ shopId: card.shop_id, off: !on })}
+            label="فكّروني لو غبت عن المحل ده"
+          />
+        </div>
+      ))}
+    </Mirror>
+  );
+}
+
+/** «قصّاتي»: الصور اللي الحلاق صوّرها، وليّا أمسحها */
+function MyCuts() {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const photos = useQuery({ queryKey: ['photos'], queryFn: () => api.get('/me/photos') });
+
+  async function remove(photo) {
+    const answer = await confirm({ title: 'تمسح الصورة دي؟', message: 'هتتمسح من عندك ومن كارتك في المحل، ومينفعش ترجع.', confirmLabel: 'امسح', danger: true });
+    if (!answer) return;
+    try {
+      await api.del(`/me/photos/${photo.id}`);
+      toast.success('اتمسحت');
+      queryClient.invalidateQueries({ queryKey: ['photos'] });
+    } catch (failure) {
+      toast.error(failure.message);
+    }
+  }
+
+  if (!photos.data || photos.data.length === 0) return null;
+  return (
+    <Mirror className="page-card stack">
+      <h2>قصّاتي</h2>
+      <ul className="photo-grid">
+        {photos.data.map((photo) => (
+          <li key={photo.id} className="photo-item">
+            <AuthImage path={`/me/photos/${photo.id}`} alt={`قصّة عند ${photo.shop_name}`} />
+            <span className="xsmall muted">
+              {photo.shop_name}{photo.barber_name ? ` · أ. ${photo.barber_name}` : ''}
+              <br />{formatDate(String(photo.created_at).slice(0, 10))}
+            </span>
+            <button type="button" className="photo-remove" aria-label="امسح الصورة" onClick={() => remove(photo)}>×</button>
+          </li>
+        ))}
+      </ul>
+    </Mirror>
   );
 }
 
@@ -103,6 +179,8 @@ export default function Account() {
       <h1 className="page-title">حسابي</h1>
       <Mirror className="page-card"><Profile /></Mirror>
       <PushPrompt compact />
+      <MyCards />
+      <MyCuts />
       <Mirror className="page-card stack">
         <h2>شكل التطبيق</h2>
         <Segmented

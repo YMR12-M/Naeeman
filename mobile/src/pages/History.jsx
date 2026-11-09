@@ -35,7 +35,7 @@ export default function History() {
                 </span>
                 <span className="stack sm end-text">
                   <span className={`badge ${TONE[row.status] ?? ''}`.trim()}>{STATUS_LABELS[row.status]}</span>
-                  {row.status === 'done' && <span className="small num">{formatMoney(row.total)}</span>}
+                  {row.status === 'done' && <span className="small num">{formatMoney(row.bill_total ?? row.total)}</span>}
                 </span>
               </Link>
             </li>

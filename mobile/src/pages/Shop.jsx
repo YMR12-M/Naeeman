@@ -17,6 +17,7 @@ import {
   LeatherButton, MarkerNote, Mirror, OpenSign, Portrait, PriceRow, Sign,
 } from '../components/brand/index.jsx';
 import { Loading, Notice } from '../components/ui/index.js';
+import { LoyaltyNote, StampRow } from '../components/CardBits.jsx';
 
 const waitText = (minutes) => (minutes === null ? 'مفيش حد دلوقتي' : minutes === 0 ? 'من غير انتظار' : `حوالي ${formatMinutes(minutes)}`);
 
@@ -27,6 +28,26 @@ export function closedReason(shop) {
   if (!shop.remote_tickets_enabled) return 'المحل ده بياخد الأدوار من الباب بس';
   if (shop.wait_minutes === null) return 'مفيش حلاقين شغّالين دلوقتي';
   return null;
+}
+
+/** كارت الأختام بتاعي في المحل ده (لو داخل ولسه ما زارش المحل ما بيظهرش) */
+function MyCard({ slug }) {
+  const { status } = useAuth();
+  const cards = useQuery({
+    queryKey: ['cards'],
+    queryFn: () => api.get('/me/cards'),
+    enabled: status === 'authenticated',
+  });
+  const card = cards.data?.find((item) => item.shop_slug === slug);
+  if (!card?.loyalty?.enabled) return null;
+  return (
+    <Mirror thin className="stack sm page-card stamp-card">
+      <h2>كارت الأختام</h2>
+      <StampRow loyalty={card.loyalty} />
+      <LoyaltyNote loyalty={card.loyalty} />
+      <span className="xsmall muted">زرت المحل <span className="num">{card.visits}</span> {card.visits === 1 ? 'مرّة' : 'مرّات'}</span>
+    </Mirror>
+  );
 }
 
 function TodayHours({ hours }) {
@@ -96,6 +117,8 @@ export default function Shop() {
       ) : (
         <Link to={`/s/${slug}/take`} className="leather block take-link">خُد دورك</Link>
       )}
+
+      <MyCard slug={slug} />
 
       {shop.barbers.length > 0 && (
         <section className="stack">

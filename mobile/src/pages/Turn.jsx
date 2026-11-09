@@ -21,6 +21,8 @@ import { useToast } from '../context/ToastContext.jsx';
 import { LeatherButton, MarkerNote, Mirror, TicketNumber } from '../components/brand/index.jsx';
 import { Button, Empty, Loading, Notice, useConfirm } from '../components/ui/index.js';
 import PushPrompt from '../components/PushPrompt.jsx';
+import BillCard from '../components/BillCard.jsx';
+import { AuthImage } from '../components/CardBits.jsx';
 
 const ACTIVE = ['waiting', 'serving'];
 
@@ -182,8 +184,19 @@ export default function Turn() {
       <Mirror thin className="stack sm page-card">
         <span className="small muted">طلبت</span>
         <span>{ticket.services.map((service) => service.name).join(' + ')}</span>
-        {!active && ticket.status === 'done' && <span className="small">الحساب <span className="num bold">{formatMoney(ticket.total)}</span></span>}
+        {!active && ticket.status === 'done' && !ticket.bill && <span className="small">الحساب <span className="num bold">{formatMoney(ticket.total)}</span></span>}
       </Mirror>
+
+      <BillCard bill={ticket.bill} />
+
+      {ticket.photo_ids?.length > 0 && (
+        <Mirror thin className="stack sm page-card">
+          <h2>قصّتك</h2>
+          <div className="photo-grid">
+            {ticket.photo_ids.map((photoId) => <AuthImage key={photoId} path={`/me/photos/${photoId}`} alt="قصّتك" />)}
+          </div>
+        </Mirror>
+      )}
 
       {!id && active && <Button variant="ghost" onClick={() => navigate('/history')}>سجلّي</Button>}
     </div>

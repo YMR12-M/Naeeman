@@ -91,8 +91,8 @@ export function refreshSession() {
 export const startSession = (data) => applySession(data);
 
 /* ── الطلبات ────────────────────────────────────────────────── */
-async function rawRequest(path, { method = 'GET', body, auth = true, retry = true, key } = {}) {
-  const headers = { Accept: 'application/json', 'X-Client-Type': CLIENT_TYPE };
+async function rawRequest(path, { method = 'GET', body, auth = true, retry = true, key, blob = false } = {}) {
+  const headers = { Accept: blob ? '*/*' : 'application/json', 'X-Client-Type': CLIENT_TYPE };
   if (key) headers['Idempotency-Key'] = key;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (auth && accessToken) headers.Authorization = `Bearer ${accessToken}`;
@@ -107,12 +107,13 @@ async function rawRequest(path, { method = 'GET', body, auth = true, retry = tru
   }
 
   if (response.status === 204) return null;
+  if (blob && response.ok) return response.blob();
   const payload = await response.json().catch(() => null);
   if (response.ok) return payload && 'data' in payload ? payload.data : payload;
 
   if (response.status === 401 && retry && auth && ['TOKEN_EXPIRED', 'NO_TOKEN'].includes(payload?.code)) {
     const session = await refreshSession();
-    if (session) return rawRequest(path, { method, body, auth, retry: false, key });
+    if (session) return rawRequest(path, { method, body, auth, retry: false, key, blob });
     endSession({ notify: true });
   }
 
@@ -137,6 +138,8 @@ async function act(path, body = {}) {
 
 export const api = {
   get: (path) => rawRequest(path),
+  /** ملف بتوكن الحساب (صور القصّات مش في مكان عام) */
+  blob: (path) => rawRequest(path, { blob: true }),
   /** صفحات عامة من غير حساب */
   public: (path) => rawRequest(path, { auth: false }),
   post: (path, body = {}, options = {}) => rawRequest(path, { method: 'POST', body, ...options }),

@@ -98,4 +98,17 @@ describe('شاشة «دوري»', () => {
     expect(screen.queryByRole('button', { name: /أخّرني/ })).toBeNull();
     expect(screen.getByRole('link', { name: 'خُد دور جديد' })).toHaveAttribute('href', '/s/elamal');
   });
+
+  test('الدور خلص ومعاه فاتورة: بتظهر بسطورها من غير سطر «الحساب» المكرّر', () => {
+    const bill = {
+      number: 5, status: 'paid', subtotal: 9000, discount: 0, reward_discount: 0, total: 9000, tip: 0, paid: 9000, refunded: 0,
+      stamp_awarded: true, reward_redeemed: false,
+      items: [{ kind: 'service', name: 'قص', qty: 1, unit_price: 9000, line_total: 9000 }],
+      payments: [{ label: 'كاش', amount: 9000, kind: 'payment' }],
+    };
+    show(ticket({ status: 'done', bill, photo_ids: [] }));
+    expect(screen.getByText('اتدفعت')).toBeInTheDocument();
+    expect(screen.getByText(/اتضاف ختم على كارتك/)).toBeInTheDocument();
+    expect(screen.queryByText(/^الحساب/)).toBeNull();
+  });
 });
