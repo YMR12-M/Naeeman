@@ -25,6 +25,40 @@ async function barberNames(ids) {
   return new Map(rows.map((row) => [row.id, row]));
 }
 
+/**
+ * فاتورة الدور زي ما الزبون يشوفها (السطور والإجمالي والدفع)، من غير أي
+ * حاجة داخلية زي العمولة والتكلفة.
+ */
+async function customerBill(ticketId) {
+  const bill = await queryOne(
+    `SELECT id, number, status, subtotal, discount, reward_discount, total, tip, paid, refunded, stamp_awarded, reward_redeemed, paid_at
+       FROM bills WHERE ticket_id = ? AND status <> 'void'`,
+    [ticketId],
+  );
+  if (!bill) return null;
+  const [items, payments] = await Promise.all([
+    query('SELECT kind, name, qty, unit_price, line_total FROM bill_items WHERE bill_id = ? ORDER BY id', [bill.id]),
+    query("SELECT method_label, amount, kind FROM payments WHERE bill_id = ? ORDER BY id", [bill.id]),
+  ]);
+  const money = (value) => Number(value);
+  return {
+    number: bill.number,
+    status: bill.status,
+    subtotal: money(bill.subtotal),
+    discount: money(bill.discount),
+    reward_discount: money(bill.reward_discount),
+    total: money(bill.total),
+    tip: money(bill.tip),
+    paid: money(bill.paid),
+    refunded: money(bill.refunded),
+    stamp_awarded: Boolean(bill.stamp_awarded),
+    reward_redeemed: Boolean(bill.reward_redeemed),
+    paid_at: bill.paid_at,
+    items: items.map((item) => ({ ...item, unit_price: money(item.unit_price), line_total: money(item.line_total) })),
+    payments: payments.map((payment) => ({ label: payment.method_label, amount: money(payment.amount), kind: payment.kind })),
+  };
+}
+
 /** صورة دور واحد كما يشوفها صاحبه، ومعاها رقم نسخة الطابور (للـ stream) */
 async function viewOf(ticket) {
   const now = new Date();
@@ -39,9 +73,13 @@ async function viewOf(ticket) {
   } else {
     settings = await loadSettings(ticket.shop_id);
   }
-  const [shop, barbers] = await Promise.all([
+  const [shop, barbers, bill, photos] = await Promise.all([
     shopCard(ticket.shop_id),
     barberNames([ticket.preferred_barber_id, ticket.barber_id]),
+    ticket.status === 'done' || ticket.status === 'serving' ? customerBill(ticket.id) : null,
+    ticket.status === 'done'
+      ? query('SELECT id FROM customer_photos WHERE ticket_id = ? AND deleted_at IS NULL ORDER BY id', [ticket.id])
+      : [],
   ]);
   const barberCard = (id) => (id && barbers.has(id) ? barbers.get(id) : null);
 
@@ -71,6 +109,8 @@ async function viewOf(ticket) {
       started_at: ticket.started_at,
       finished_at: ticket.finished_at,
       end_reason: ticket.end_reason,
+      bill,
+      photo_ids: photos.map((photo) => photo.id),
     },
   };
 }
@@ -100,8 +140,10 @@ export const meService = {
     const rows = await query(
       `SELECT t.id, t.number, t.status, t.business_date, t.total, t.created_at, t.finished_at, t.end_reason,
               s.name AS shop_name, s.slug AS shop_slug, b.name AS barber_name,
-              (SELECT GROUP_CONCAT(ts.name ORDER BY ts.id SEPARATOR '، ') FROM ticket_services ts WHERE ts.ticket_id = t.id) AS services
+              (SELECT GROUP_CONCAT(ts.name ORDER BY ts.id SEPARATOR '، ') FROM ticket_services ts WHERE ts.ticket_id = t.id) AS services,
+              bl.total AS bill_total, bl.status AS bill_status
          FROM queue_tickets t
+         LEFT JOIN bills bl ON bl.ticket_id = t.id AND bl.status <> 'void'
          JOIN shops s ON s.id = t.shop_id
          LEFT JOIN barbers b ON b.id = t.barber_id
         WHERE t.customer_id = ?
@@ -109,7 +151,7 @@ export const meService = {
         LIMIT 50`,
       [customerId],
     );
-    return rows.map((row) => ({ ...row, total: Number(row.total) }));
+    return rows.map((row) => ({ ...row, total: Number(row.total), bill_total: row.bill_total === null ? null : Number(row.bill_total) }));
   },
 
   async shopBySlug(slug) {

@@ -15,6 +15,11 @@ import deviceRoutes from '../modules/devices/devices.routes.js';
 import displayRoutes from '../modules/devices/display.routes.js';
 import kioskRoutes from '../modules/devices/kiosk.routes.js';
 import chairRoutes from '../modules/devices/chair.routes.js';
+import productRoutes from '../modules/products/products.routes.js';
+import cardRoutes from '../modules/cards/cards.routes.js';
+import payrollRoutes from '../modules/payroll/payroll.routes.js';
+import hubRoutes from '../modules/hub/hub.routes.js';
+import { billsRouter, dayCloseRouter, drawerRouter, methodsRouter } from '../modules/billing/billing.routes.js';
 
 const router = Router();
 
@@ -27,6 +32,15 @@ router.use('/barbers', barberRoutes);
 router.use('/audit', auditRoutes);
 router.use('/queue', queueRoutes);
 router.use('/reports', reportRoutes);
+// المرحلة التانية: الكاشير والمخزن والحساب والكروت
+router.use('/bills', billsRouter);
+router.use('/payment-methods', methodsRouter);
+router.use('/drawer', drawerRouter);
+router.use('/day-close', dayCloseRouter);
+router.use('/products', productRoutes);
+router.use('/payroll', payrollRoutes);
+router.use('/cards', cardRoutes);
+router.use('/hub', hubRoutes);
 
 // الزبون (توكن بجمهور مختلف عن الموظفين)
 router.use('/customer-auth', customerAuthRoutes);

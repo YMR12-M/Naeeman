@@ -25,6 +25,10 @@ describe('المحل', () => {
     assert.deepEqual(shop.settings, {
       remote_tickets_enabled: true, max_tickets_per_day: null, notify_ahead: 2, grace_minutes: 10,
       max_delays: 2, close_buffer_minutes: 15, display_name_style: 'first_initial',
+      // المرحلة التانية: كله مقفول افتراضيًا، فالمحل القديم بيشتغل زي ما هو
+      cashier_enabled: false, max_cashier_discount_pct: 10, receipt_width: 80, receipt_footer: null, receipt_auto_print: false,
+      loyalty_enabled: false, loyalty_stamps_required: 9, loyalty_reward_type: 'top_service', loyalty_reward_service_id: null,
+      loyalty_reward_value: 0, loyalty_min_total: 0, reminder_enabled: false, reminder_days: 21,
     });
     assert.deepEqual(shop.hours, []);
     assert.equal(shop.now.open, false);

@@ -16,6 +16,17 @@ import { sendPushToCustomer } from './push.js';
 
 const MAX_ATTEMPTS = 5;
 
+/**
+ * الإشعار بيفقد قيمته بعد وقت: «دورك جه» بعد ساعة ما بقاش ليه لازمة،
+ * والتذكير بعد يوم. لو النت كان قاطع (المحل هو السيرفر)، اللي عدّى وقته
+ * بيتعلّم skipped بدل ما يوصل الزبون متأخّر.
+ */
+const STALE_MINUTES = { push: 60, reminder: 24 * 60 };
+
+/** أخطاء الشبكة نفسها (النت قاطع): ما بتتحسبش محاولة */
+const NETWORK_CODES = new Set(['ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'ENETUNREACH', 'EHOSTUNREACH', 'UND_ERR_CONNECT_TIMEOUT']);
+export const isNetworkError = (error) => NETWORK_CODES.has(error?.code) || NETWORK_CODES.has(error?.cause?.code);
+
 /** يضيف بريدًا إلى الصندوق. `tx` اختياري ليكون جزءًا من معاملة قائمة. */
 export async function enqueueEmail({ shopId = null, to, template, payload, delaySeconds = 0 }, tx = { execute }) {
   if (!to) return;
@@ -27,11 +38,11 @@ export async function enqueueEmail({ shopId = null, to, template, payload, delay
 }
 
 /** إشعار Push لزبون (to_address = رقم الزبون) */
-export async function enqueuePush({ shopId = null, customerId, payload }, tx = { execute }) {
+export async function enqueuePush({ shopId = null, customerId, payload, template = 'push' }, tx = { execute }) {
   await tx.execute(
     `INSERT INTO notification_outbox (shop_id, channel, to_address, template, payload)
-     VALUES (?, 'push', ?, 'push', ?)`,
-    [shopId, String(customerId), JSON.stringify(payload)],
+     VALUES (?, 'push', ?, ?, ?)`,
+    [shopId, String(customerId), template, JSON.stringify(payload)],
   );
 }
 
@@ -48,7 +59,7 @@ async function deliver(row) {
 /** يعالج دفعة من الرسائل المستحقّة. يعيد عدد المرسَل. */
 export async function processOutbox({ batch = 25 } = {}) {
   const due = await query(
-    `SELECT id, channel, to_address, template, payload, attempts
+    `SELECT id, channel, to_address, template, payload, attempts, TIMESTAMPDIFF(MINUTE, created_at, NOW()) AS age_minutes
        FROM notification_outbox
       WHERE status = 'pending' AND scheduled_at <= NOW()
       ORDER BY scheduled_at
@@ -57,6 +68,11 @@ export async function processOutbox({ batch = 25 } = {}) {
 
   let sent = 0;
   for (const row of due) {
+    const staleAfter = row.channel === 'push' ? (STALE_MINUTES[row.template] ?? STALE_MINUTES.push) : null;
+    if (staleAfter !== null && row.age_minutes > staleAfter) {
+      await execute("UPDATE notification_outbox SET status = 'skipped', last_error = 'stale' WHERE id = ?", [row.id]);
+      continue;
+    }
     try {
       const result = await deliver(row);
       const status = result.status === 'skipped' ? 'skipped' : 'sent';
@@ -66,6 +82,14 @@ export async function processOutbox({ batch = 25 } = {}) {
       );
       if (status === 'sent') sent += 1;
     } catch (error) {
+      if (isNetworkError(error)) {
+        // النت قاطع: نستنّى دقيقة ونجرّب تاني من غير ما نحسبها محاولة
+        await execute(
+          'UPDATE notification_outbox SET last_error = ?, scheduled_at = DATE_ADD(NOW(), INTERVAL 1 MINUTE) WHERE id = ?',
+          [`offline: ${String(error.message).slice(0, 460)}`, row.id],
+        );
+        continue;
+      }
       const attempts = row.attempts + 1;
       const failed = attempts >= MAX_ATTEMPTS;
       // تأخير متزايد: 2 · 4 · 8 · 16 دقيقة

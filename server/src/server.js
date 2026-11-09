@@ -8,6 +8,8 @@ import { logger } from './utils/logger.js';
 import { startJobs, stopJobs } from './jobs/index.js';
 import './jobs/outbox.js';
 import './jobs/queue.js';
+import './jobs/reminders.js';
+import './jobs/backup.js';
 
 if (!(await assertDatabaseConnection())) {
   logger.error('السيرفر لن يعمل بدون قاعدة البيانات. تأكد إن MySQL شغّال وأن DB_* في .env صحيحة، ثم: npm run db:setup');
@@ -15,10 +17,18 @@ if (!(await assertDatabaseConnection())) {
 }
 
 const app = createApp();
-const server = app.listen(env.port, () => {
-  logger.success(`نعيمًا API شغّال على http://localhost:${env.port}${env.apiPrefix}  (${env.nodeEnv})`);
+const server = app.listen(env.port, env.host, () => {
+  logger.success(`نعيمًا API شغّال على http://localhost:${env.port}${env.apiPrefix}  (${env.nodeEnv}${env.hubMode ? '، المحل هو السيرفر' : ''})`);
+  if (env.staticDir) logger.info(`لوحة المحل والأجهزة: http://localhost:${env.port}/`);
   startJobs();
 });
+
+// تطبيق الزبون على بورت تاني (نفس الـ API ونفس العملية، فالتحديث اللحظي واحد)
+const customerServer = env.customerPort && env.customerStaticDir
+  ? createApp({ staticDir: env.customerStaticDir }).listen(env.customerPort, env.host, () => {
+    logger.info(`تطبيق الزبون: http://localhost:${env.customerPort}/`);
+  })
+  : null;
 
 /** إيقاف نظيف: نكمل الطلبات الجارية ثم نغلق الاتصالات (Render/Docker يرسلان SIGTERM) */
 let closing = false;
@@ -27,6 +37,7 @@ async function shutdown(signal) {
   closing = true;
   logger.info(`${signal} — إيقاف نظيف...`);
   stopJobs();
+  customerServer?.close();
   server.close(async () => {
     await closePool();
     process.exit(0);

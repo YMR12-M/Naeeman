@@ -13,6 +13,8 @@
     "db:reset": "node --env-file-if-exists=.env src/db/migrate.js reset",
     "db:bootstrap": "node --env-file-if-exists=.env src/db/bootstrap.js",
     "db:setup": "npm run db:migrate && npm run db:bootstrap",
+    "db:backup": "node --env-file-if-exists=.env src/db/backup.js backup",
+    "db:restore": "node --env-file-if-exists=.env src/db/backup.js restore",
     "test": "NODE_ENV=test node --test --test-concurrency=1 --env-file-if-exists=.env.test \"test/**/*.test.js\"",
     "test:watch": "NODE_ENV=test node --test --watch --test-concurrency=1 --env-file-if-exists=.env.test \"test/**/*.test.js\""
   },

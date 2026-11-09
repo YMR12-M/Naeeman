@@ -2,6 +2,8 @@
  * تركيب تطبيق Express.
  * ترتيب الـ middleware مقصود: الأمان ← التحليل ← السياق والسجلات ← المسارات ← الأخطاء.
  */
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -18,7 +20,33 @@ import { notFound } from './middleware/notFound.js';
 import { requestContext } from './middleware/requestContext.js';
 import { generalLimiter } from './middleware/rateLimiters.js';
 
-export function createApp() {
+/**
+ * الواجهة (تطبيق صفحة واحدة) من فولدر مبني: الملفات زي ما هي، وأي مسار
+ * تاني مش API = index.html. ملفات assets ليها hash في اسمها فبتتخزّن سنة،
+ * وindex.html ما بيتخزّنش عشان النسخة الجديدة توصل أوّل ما تنزل.
+ */
+function serveSpa(app, dir) {
+  const root = path.resolve(dir);
+  const index = path.join(root, 'index.html');
+  if (!existsSync(index)) throw new Error(`مفيش index.html في ${root} — ابني الواجهة الأول (npm run build)`);
+  app.use(express.static(root, {
+    index: false,
+    setHeaders: (res, file) => {
+      res.setHeader('Cache-Control', file.includes(`${path.sep}assets${path.sep}`) ? 'public, max-age=31536000, immutable' : 'no-cache');
+    },
+  }));
+  app.get(/^(?!\/api\/|\/health).*/, (req, res, next) => {
+    if (!req.accepts('html')) return next();
+    res.setHeader('Cache-Control', 'no-cache');
+    return res.sendFile(index);
+  });
+}
+
+/**
+ * @param {object} [options]
+ * @param {string} [options.staticDir]  فولدر واجهة مبنية يقدّمها السيرفر نفسه (وضع المحل)
+ */
+export function createApp({ staticDir = env.staticDir } = {}) {
   const app = express();
 
   // خلف Nginx/Cloudflare/Render نحتاج ثقة البروكسي ليصل req.ip صحيحًا
@@ -35,18 +63,26 @@ export function createApp() {
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   }));
 
-  // لوحة المحل وتطبيق الزبون والأجهزة: قائمة نطاقات صريحة + كوكي
-  const strictCors = cors({
-    origin: (origin, callback) => {
-      // طلبات بلا Origin (أدوات المراقبة، curl) تمرّ
-      if (!origin || env.clientOrigin.includes(origin)) return callback(null, true);
-      return callback(new Error('CORS_NOT_ALLOWED'));
-    },
+  // لوحة المحل وتطبيق الزبون والأجهزة: قائمة نطاقات صريحة + كوكي.
+  // والطلب من نفس العنوان اللي السيرفر شغّال عليه مسموح دايمًا: التابلت
+  // بيفتح عنوان الواي فاي (192.168.1.10:4030) واللي ممكن يتغيّر.
+  const strictOptions = {
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Client-Type', 'X-Request-Id', 'X-Device-Token', 'Idempotency-Key'],
     exposedHeaders: ['X-Request-Id'],
     maxAge: 600,
+  };
+  const sameOrigin = (req, origin) => {
+    try { return new URL(origin).host === req.headers.host; } catch { return false; }
+  };
+  const strictCors = cors((req, callback) => {
+    const { origin } = req.headers;
+    // طلبات بلا Origin (أدوات المراقبة، curl، برنامج الديسكتوب) تمرّ
+    if (!origin || env.clientOrigin.includes(origin) || sameOrigin(req, origin)) {
+      return callback(null, { ...strictOptions, origin: true });
+    }
+    return callback(new Error('CORS_NOT_ALLOWED'));
   });
 
   // صفحة المحل العامة: أي موقع يقدر يعرض «قدّامك كام» — لكن بلا كوكي أبدًا
@@ -87,6 +123,9 @@ export function createApp() {
 
   // ── مسارات الـ API ───────────────────────────────────────
   app.use(env.apiPrefix, generalLimiter, apiRoutes);
+
+  // ── الواجهة نفسها (وضع المحل أو Docker من غير nginx) ─────
+  if (staticDir) serveSpa(app, staticDir);
 
   // ── الأخطاء (آخر ما يُسجَّل دائمًا) ───────────────────────
   app.use(notFound);

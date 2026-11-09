@@ -12,6 +12,7 @@
  */
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -81,8 +82,16 @@ const list = (key, fallback = '') =>
 
 /* ═══════════════════════════════════════════════════════════════ */
 
-const clientOrigin = list('CLIENT_ORIGIN', 'http://localhost:5200,http://localhost:5201');
-if (isProd && clientOrigin.some((origin) => origin.includes('localhost') || origin === '*')) {
+/**
+ * وضع «المحل هو السيرفر»: السيرفر شغّال على كمبيوتر المحل جوّه برنامج
+ * الديسكتوب، والأجهزة بتكلّمه على واي فاي المحل بـ http عادي (مفيش شهادة
+ * على عنوان زي 192.168.1.10). فبنسمح بكوكي من غير Secure وبعناوين محلية
+ * حتى في الإنتاج — بس في الوضع ده بس.
+ */
+const hubMode = bool('HUB_MODE', false);
+
+const clientOrigin = list('CLIENT_ORIGIN', hubMode ? '' : 'http://localhost:5200,http://localhost:5201');
+if (isProd && !hubMode && clientOrigin.some((origin) => origin.includes('localhost') || origin === '*')) {
   problems.push('CLIENT_ORIGIN يحتوي localhost أو * — اضبطه على نطاقاتك فقط في الإنتاج');
 }
 
@@ -94,7 +103,7 @@ const cookieSecure = bool('COOKIE_SECURE', isProd);
 if (sameSite === 'none' && !cookieSecure) {
   problems.push('COOKIE_SAMESITE=none يتطلّب COOKIE_SECURE=true — المتصفّح يرفض غير ذلك');
 }
-if (isProd && !cookieSecure) {
+if (isProd && !cookieSecure && !hubMode) {
   problems.push('COOKIE_SECURE لازم true في الإنتاج (HTTPS)');
 }
 
@@ -106,22 +115,43 @@ if (isTest && !String(dbName).endsWith('_test')) {
 }
 
 const smtpHost = read('SMTP_HOST', '');
-const mailDisabled = bool('MAIL_DISABLED', false);
+const mailDisabled = bool('MAIL_DISABLED', hubMode && !smtpHost);
 if (isProd && !smtpHost && !mailDisabled) {
   problems.push('SMTP_HOST مطلوب في الإنتاج — أو MAIL_DISABLED=true صراحةً لو مش هتبعت بريد');
 }
 
-const appUrl = read('APP_URL', clientOrigin[0] || 'http://localhost:5200');
+const appUrl = read('APP_URL', clientOrigin[0] || `http://localhost:${hubMode ? port : 5200}`);
+const customerPort = num('CUSTOMER_PORT', 0);
 
 export const env = {
   nodeEnv,
   isProd,
   isTest,
   port,
+  // 0.0.0.0 = كل الشبكة (التابلت والتلفزيون على واي فاي المحل)
+  host: read('HOST', '0.0.0.0'),
+  hubMode,
   apiPrefix: read('API_PREFIX', '/api/v1'),
   clientOrigin,
   appUrl,
-  customerAppUrl: read('CUSTOMER_APP_URL', clientOrigin[1] || 'http://localhost:5201'),
+  customerAppUrl: read('CUSTOMER_APP_URL', clientOrigin[1] || `http://localhost:${customerPort || 5201}`),
+
+  // السيرفر بيقدّم الواجهتين بنفسه (وضع المحل، أو Docker من غير nginx)
+  staticDir: read('STATIC_DIR', ''),
+  customerStaticDir: read('CUSTOMER_STATIC_DIR', ''),
+  customerPort,
+
+  // صور القصّات (مش مكان عام: بتتقري بتوكن بس)
+  uploadsDir: resolve(SERVER_ROOT, read('UPLOADS_DIR', isTest ? resolve(tmpdir(), `naeeman-test-uploads-${process.pid}`) : 'uploads')),
+
+  backup: {
+    enabled: bool('BACKUP_ENABLED', hubMode),
+    dir: resolve(SERVER_ROOT, read('BACKUP_DIR', 'backups')),
+    // فولدر Google Drive أو OneDrive على الجهاز: النسخ بتتنسخ له كمان
+    copyDir: read('BACKUP_COPY_DIR', ''),
+    keep: num('BACKUP_KEEP', 30),
+    everyHours: num('BACKUP_EVERY_HOURS', 6),
+  },
   apiPublicUrl: requiredInProd('API_PUBLIC_URL', {
     fallback: `http://localhost:${port}`,
     hint: 'العنوان العام للـ API',

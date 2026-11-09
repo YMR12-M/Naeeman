@@ -26,6 +26,10 @@ import { openQueueStream } from '../../queue/stream.js';
 import { ticketMinutes } from '../../queue/engine.js';
 import { barbersService } from '../barbers/barbers.service.js';
 import { queueService, readState } from '../queue/queue.service.js';
+import { todayFor } from '../billing/billing.service.js';
+import { markBarberDay } from '../payroll/payroll.service.js';
+import { addPhoto, cardSummaries, photoFile } from '../cards/cards.service.js';
+import { rawImage, sendImage } from '../cards/cards.routes.js';
 
 const MAX_FAILED_PINS = 5;
 const PIN_LOCK_MINUTES = 15;
@@ -58,10 +62,27 @@ export async function chairView(shopId, barberId) {
 
   const current = state.tickets.find((ticket) => ticket.status === 'serving' && ticket.barber_id === barberId);
   const mine = state.waiting().filter((ticket) => ticket.preferred_barber_id === null || ticket.preferred_barber_id === barberId);
-  const services = await query(
-    'SELECT id, name, price FROM services WHERE shop_id = ? AND archived_at IS NULL AND active = 1 ORDER BY sort_order, id',
-    [shopId],
-  );
+  const [services, [recent]] = await Promise.all([
+    query(
+      'SELECT id, name, price FROM services WHERE shop_id = ? AND archived_at IS NULL AND active = 1 ORDER BY sort_order, id',
+      [shopId],
+    ),
+    // آخر زبون خلص عند الحلاق (لـ «صوّر القصّة» بعد «خلّصت»): خلال نص ساعة، وليه كارت
+    query(
+      `SELECT t.id, t.number, t.name, t.shop_customer_id,
+              EXISTS (SELECT 1 FROM customer_photos p WHERE p.ticket_id = t.id AND p.deleted_at IS NULL) AS has_photo
+         FROM queue_tickets t
+        WHERE t.shop_id = ? AND t.barber_id = ? AND t.status = 'done' AND t.shop_customer_id IS NOT NULL
+          AND t.finished_at > DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+        ORDER BY t.finished_at DESC, t.id DESC LIMIT 1`,
+      [shopId, barberId],
+    ),
+  ]);
+  const cards = await cardSummaries(shopId, [current?.shop_customer_id, ...mine.slice(0, 2).map((ticket) => ticket.shop_customer_id)]);
+  const cardFor = (id) => {
+    const card = cards.get(id);
+    return card ? { id: card.id, notes: card.notes, visits: card.visits, last_photo_id: card.last_photo_id, loyalty: card.loyalty } : null;
+  };
 
   return {
     version: state.version,
@@ -77,6 +98,10 @@ export async function chairView(shopId, barberId) {
       total: Number(current.total),
       started_at: current.started_at,
       expected_minutes: Math.round(ticketMinutes(current, barberId, state.stats)),
+      card: cardFor(current.shop_customer_id),
+    } : null,
+    recent: recent ? {
+      id: recent.id, number: recent.number, name: recent.name, card_id: recent.shop_customer_id, has_photo: Boolean(recent.has_photo),
     } : null,
     next: mine.slice(0, 2).map((ticket) => ({
       id: ticket.id,
@@ -85,6 +110,7 @@ export async function chairView(shopId, barberId) {
       arrived: Boolean(ticket.arrived_at),
       called: Boolean(ticket.called_at),
       for_me: ticket.preferred_barber_id === barberId,
+      card: cardFor(ticket.shop_customer_id),
     })),
     waiting_for_me: mine.length,
     services: services.map((service) => ({ ...service, price: Number(service.price) })),
@@ -140,6 +166,7 @@ router.post('/login', pinLimiter, validate({ body: loginBody }), asyncHandler(as
     await tx.execute('UPDATE devices SET current_barber_id = ? WHERE id = ?', [barber.id, req.device.id]);
     // أوّل الوردية: «مش موجود» ← «متاح»
     if (barber.status === 'off') await tx.execute("UPDATE barbers SET status = 'available', break_until = NULL WHERE id = ?", [barber.id]);
+    await markBarberDay(tx, { shopId: req.shopId, barberId: barber.id, date: await todayFor(req.shopId, tx) });
     return { ok: true };
   });
   // المحاولة الغلط اتسجّلت (المعاملة اتقفلت عادي)، والرد 401
@@ -181,6 +208,33 @@ router.post('/services', requireBarber, validate({ body: serviceBody }), once, a
   if (!view.serving) throw ApiError.conflict('مفيش زبون على الكرسي', { code: 'NOTHING_SERVING' });
   await queueService.addService(req.shopId, view.serving.id, req.body.service_id, chair(req));
   ok(res, await chairView(req.shopId, req.barberId));
+}));
+
+/**
+ * «صوّر القصّة»: صورة للزبون اللي على الكرسي أو اللي لسه خالص (خلال نص
+ * ساعة). الصورة بتتصغّر على التابلت قبل ما تترفع.
+ */
+router.post('/photo', requireBarber, rawImage, validate({ query: z.object({ ticket_id: idSchema }) }), asyncHandler(async (req, res) => {
+  const view = await chairView(req.shopId, req.barberId);
+  const ticketId = req.query.ticket_id;
+  const target = view.serving?.id === ticketId
+    ? { id: ticketId, cardId: view.serving.card?.id }
+    : (view.recent?.id === ticketId ? { id: ticketId, cardId: view.recent.card_id } : null);
+  if (!target) throw ApiError.conflict('الصورة للزبون اللي على الكرسي أو اللي لسه خالص بس', { code: 'PHOTO_TICKET' });
+  if (!target.cardId) throw ApiError.conflict('الزبون ده مالوش كارت (من غير موبايل)', { code: 'NO_CARD' });
+  const photo = await addPhoto(req.shopId, target.cardId, req.body, {
+    ticketId, barberId: req.barberId, takenBy: 'chair', takenById: req.device.id,
+  });
+  ok(res, { photo, view: await chairView(req.shopId, req.barberId) }, 201);
+}));
+
+/** صورة من كارت زبون قدّام الحلاق (اللي على الكرسي، أو الجايين عنده، أو اللي لسه خالص) */
+router.get('/photos/:id', requireBarber, validate({ params: z.object({ id: idSchema }) }), asyncHandler(async (req, res) => {
+  const view = await chairView(req.shopId, req.barberId);
+  const allowed = new Set([view.serving?.card?.id, view.recent?.card_id, ...view.next.map((ticket) => ticket.card?.id)].filter(Boolean));
+  const photo = await query('SELECT shop_customer_id FROM customer_photos WHERE id = ? AND shop_id = ? AND deleted_at IS NULL', [req.params.id, req.shopId]);
+  if (!photo[0] || !allowed.has(photo[0].shop_customer_id)) throw ApiError.notFound('الصورة غير موجودة', { code: 'PHOTO_NOT_FOUND' });
+  sendImage(res, await photoFile(req.shopId, req.params.id));
 }));
 
 /** «استراحة» و«رجعت» */

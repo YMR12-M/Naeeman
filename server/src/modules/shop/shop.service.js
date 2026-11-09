@@ -9,9 +9,12 @@ const SHOP_COLUMNS = `id, uuid, name, slug, phone, whatsapp, address, city, lati
   timezone, currency, accepting_tickets, status, created_at, updated_at`;
 
 const SETTINGS_COLUMNS = `remote_tickets_enabled, max_tickets_per_day, notify_ahead, grace_minutes,
-  max_delays, close_buffer_minutes, display_name_style`;
+  max_delays, close_buffer_minutes, display_name_style,
+  cashier_enabled, max_cashier_discount_pct, receipt_width, receipt_footer, receipt_auto_print,
+  loyalty_enabled, loyalty_stamps_required, loyalty_reward_type, loyalty_reward_service_id,
+  loyalty_reward_value, loyalty_min_total, reminder_enabled, reminder_days`;
 
-const BOOL_SETTINGS = ['remote_tickets_enabled'];
+const BOOL_SETTINGS = ['remote_tickets_enabled', 'cashier_enabled', 'receipt_auto_print', 'loyalty_enabled', 'reminder_enabled'];
 
 const hm = (time) => String(time).slice(0, 5);
 
@@ -22,6 +25,8 @@ function shapeShop(row) {
 function shapeSettings(row) {
   const out = { ...row };
   for (const key of BOOL_SETTINGS) out[key] = Boolean(out[key]);
+  out.receipt_width = Number(out.receipt_width);
+  out.loyalty_min_total = Number(out.loyalty_min_total);
   return out;
 }
 
@@ -103,11 +108,27 @@ export const shopService = {
 
   async updateSettings(shopId, changes) {
     const before = await loadSettings(shopId);
+    const merged = { ...before, ...changes };
+    // قواعد بين أكتر من حقل (الـ PATCH ممكن يبعت واحد بس منهم)
+    if (merged.loyalty_reward_type === 'percent' && (merged.loyalty_reward_value < 1 || merged.loyalty_reward_value > 100)) {
+      throw ApiError.unprocessable('نسبة الخصم من 1 لـ 100', { code: 'VALIDATION_ERROR', details: { loyalty_reward_value: 'من 1 لـ 100' } });
+    }
+    if (merged.loyalty_reward_type === 'amount' && merged.loyalty_reward_value < 1) {
+      throw ApiError.unprocessable('اكتب مبلغ الخصم', { code: 'VALIDATION_ERROR', details: { loyalty_reward_value: 'اكتب المبلغ' } });
+    }
+    if (merged.loyalty_reward_type === 'service') {
+      const service = merged.loyalty_reward_service_id
+        ? await queryOne('SELECT id FROM services WHERE id = ? AND shop_id = ? AND archived_at IS NULL', [merged.loyalty_reward_service_id, shopId])
+        : null;
+      if (!service) {
+        throw ApiError.unprocessable('اختار الخدمة اللي هتبقى ببلاش', { code: 'VALIDATION_ERROR', details: { loyalty_reward_service_id: 'اختار خدمة' } });
+      }
+    }
     const sets = [];
     const params = [];
     for (const [key, value] of Object.entries(changes)) {
       sets.push(`${key} = ?`);
-      params.push(value);
+      params.push(key === 'receipt_width' ? String(value) : value);
     }
     if (sets.length > 0) await execute(`UPDATE shop_settings SET ${sets.join(', ')} WHERE shop_id = ?`, [...params, shopId]);
     return { before, after: await loadSettings(shopId) };

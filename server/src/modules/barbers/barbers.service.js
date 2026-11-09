@@ -10,6 +10,8 @@
 import { query, queryOne, execute, transaction } from '../../config/db.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { hashPassword } from '../../utils/security.js';
+import { todayFor } from '../billing/billing.service.js';
+import { markBarberDay } from '../payroll/payroll.service.js';
 
 const COLUMNS = `id, name, chair_no, status, break_until, photo_path, sort_order, archived_at,
   (pin_hash IS NOT NULL) AS has_pin, created_at, updated_at`;
@@ -98,6 +100,8 @@ export const barbersService = {
     } else {
       await execute('UPDATE barbers SET status = ?, break_until = NULL WHERE id = ?', [status, id]);
     }
+    // «موجود» = يوم شغل في حساب الحلاق (اليومية)
+    if (status === 'available') await markBarberDay({ execute }, { shopId, barberId: id, date: await todayFor(shopId) });
     return { before, after: await find(shopId, id) };
   },
 

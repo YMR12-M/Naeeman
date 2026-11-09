@@ -28,11 +28,14 @@ import {
 } from '../../queue/engine.js';
 import { publishQueue } from '../../queue/bus.js';
 import { verifyCheckin } from '../../queue/checkin.js';
+import { onTicketDone } from '../billing/billing.service.js';
+import { cardSummaries, linkCard } from '../cards/cards.service.js';
+import { markBarberDay } from '../payroll/payroll.service.js';
 
 const MINUTE = 60_000;
 const read = { query, queryOne };
 
-const TICKET_COLUMNS = `id, shop_id, business_date, number, customer_id, name, phone, source,
+const TICKET_COLUMNS = `id, shop_id, business_date, number, customer_id, shop_customer_id, name, phone, source,
   preferred_barber_id, barber_id, status, sort_key, arrived_at, called_at, delays_used, auto_delayed,
   trust_confirm_required, confirmed_at, near_notified_at, started_at, finished_at, total,
   ended_by, end_reason, created_at`;
@@ -187,7 +190,7 @@ async function placeTicket(tx, waiting, ticket, index) {
   }
 }
 
-async function endTicket(tx, ticket, to, actor, reason = null) {
+async function endTicket(tx, ticket, to, actor, reason = null, settings = null) {
   assertTransition(ticket.status, to, actor.type);
   await tx.execute(
     `UPDATE queue_tickets SET status = ?, ended_by = ?, end_reason = ?,
@@ -197,6 +200,8 @@ async function endTicket(tx, ticket, to, actor, reason = null) {
   );
   await event(tx, ticket, to, actor, reason ? { reason } : null);
   ticket.status = to;
+  // الدور خلص = فاتورة (ولو الكاشير مقفول بتتسدّد كاش لوحدها)
+  if (to === 'done') await onTicketDone(tx, ticket, settings ?? await loadSettings(ticket.shop_id, tx));
 }
 
 const SYSTEM = { type: 'system' };
@@ -224,7 +229,7 @@ async function applySweep(tx, state) {
         await endTicket(tx, ticket, 'cancelled', SYSTEM, 'day_closed');
         await push(tx, ticket, 'الدور اتلغى', 'يوم الشغل خلص قبل ما دورك ييجي. تقدر تاخد دور جديد.');
       } else {
-        await endTicket(tx, ticket, 'done', SYSTEM, 'day_closed');
+        await endTicket(tx, ticket, 'done', SYSTEM, 'day_closed', settings);
       }
       changed = true;
       continue;
@@ -292,6 +297,7 @@ function ticketView(ticket, estimateFor, now) {
     number: ticket.number,
     name: ticket.name,
     phone: ticket.phone,
+    card_id: ticket.shop_customer_id ?? null,
     source: ticket.source,
     status: ticket.status,
     preferred_barber_id: ticket.preferred_barber_id,
@@ -344,6 +350,14 @@ function staffView(state) {
   };
 }
 
+/** ملخّص كارت الزبون (الملاحظات والأختام وآخر صورة) على كل دور في الطابور */
+async function withCards(shopId, view) {
+  const tickets = [...view.waiting, ...view.barbers.map((barber) => barber.serving).filter(Boolean)];
+  const cards = await cardSummaries(shopId, tickets.map((ticket) => ticket.card_id));
+  for (const ticket of tickets) ticket.card = cards.get(ticket.card_id) ?? null;
+  return view;
+}
+
 /* ═══════════════════ أدوات مشتركة للعمليات ═══════════════════ */
 
 function findActive(state, ticketId) {
@@ -393,7 +407,7 @@ async function addTicketService(tx, ticket, service, addedBy) {
 
 /** الدور خلص: نسجّل المدّة ونعلّم السيستم مدّة الحلاق لو كانت خدمة واحدة */
 async function finishServing(tx, state, ticket, actor) {
-  await endTicket(tx, ticket, 'done', actor);
+  await endTicket(tx, ticket, 'done', actor, null, state.settings);
   const minutes = ticket.started_at ? (state.now - ticket.started_at) / MINUTE : null;
   if (minutes !== null && ticket.services.length === 1 && ticket.barber_id) {
     const [service] = ticket.services;
@@ -420,7 +434,7 @@ export const queueService = {
       const version = Number(row?.queue_version ?? 0);
       if (version === since) return { changed: false, version };
     }
-    return staffView(await loadState(read, shopId));
+    return withCards(shopId, staffView(await loadState(read, shopId)));
   },
 
   async getTicket(shopId, ticketId) {
@@ -520,13 +534,17 @@ export const queueService = {
 
       const number = await nextCounter(tx, shopId, `ticket:${businessDate}`);
       const maxKey = state.tickets.reduce((max, ticket) => Math.max(max, ticket.sort_key), 0);
+      // كارت الزبون في المحل (حساب التطبيق أو رقم الموبايل)
+      const cardId = await linkCard(tx, {
+        shopId, customerId: input.customer_id ?? null, phone: input.phone ?? null, name: input.name,
+      });
       const result = await tx.execute(
         `INSERT INTO queue_tickets
-           (shop_id, business_date, number, customer_id, name, phone, source, preferred_barber_id,
+           (shop_id, business_date, number, customer_id, shop_customer_id, name, phone, source, preferred_barber_id,
             sort_key, arrived_at, trust_confirm_required)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, IF(? = 'app', NULL, NOW()), ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, IF(? = 'app', NULL, NOW()), ?)`,
         [
-          shopId, businessDate, number, input.customer_id ?? null, input.name, input.phone ?? null,
+          shopId, businessDate, number, input.customer_id ?? null, cardId, input.name, input.phone ?? null,
           input.source, barberId, maxKey + KEY_STEP, input.source, trustConfirm,
         ],
       );
@@ -569,6 +587,7 @@ export const queueService = {
           [barberId, start.id],
         );
         await event(tx, start, 'started', actor, { barber_id: barberId });
+        await markBarberDay(tx, { shopId, barberId, date: start.business_date });
       }
 
       return {

@@ -31,6 +31,18 @@ export const PERMISSIONS = [
   'queue.read', 'queue.write', 'queue.manage',
   'reports.read',
   'audit.read',
+  // ── المرحلة التانية ──
+  // billing.use: فواتير ودفع ودرج وبيع منتج · billing.discount: خصم من غير حد
+  // billing.refund: مرتجع وإلغاء فاتورة فيها سطور
+  'billing.use', 'billing.discount', 'billing.refund',
+  'drawer.expense', 'drawer.advance', 'dayclose.close',
+  'payments.manage',
+  'products.read', 'products.write', 'stock.write',
+  'payroll.read', 'payroll.write',
+  // cards.write: الملاحظات والصور · cards.stamps: تعديل الأختام يدوي
+  'cards.read', 'cards.write', 'cards.stamps',
+  // المحل هو السيرفر: عناوين الواي فاي والنسخ الاحتياطية والاسترجاع (المالك بس)
+  'hub.manage',
 ];
 
 const ALL = new Set(PERMISSIONS);
@@ -45,11 +57,18 @@ export const ROLE_PERMISSIONS = {
     'barbers.read', 'barbers.write', 'barbers.status',
     'queue.read', 'queue.write', 'queue.manage',
     'reports.read',
+    'billing.use', 'billing.discount', 'billing.refund',
+    'drawer.expense', 'drawer.advance', 'dayclose.close',
+    'products.read', 'products.write', 'stock.write',
+    'payroll.read',
+    'cards.read', 'cards.write', 'cards.stamps',
   ]),
 
   cashier: new Set([
     'shop.read', 'services.read', 'barbers.read', 'barbers.status',
     'queue.read', 'queue.write',
+    'billing.use', 'drawer.expense', 'products.read',
+    'cards.read', 'cards.write',
   ]),
 };
 

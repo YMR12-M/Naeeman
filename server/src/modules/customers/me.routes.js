@@ -12,6 +12,8 @@ import { queueService } from '../queue/queue.service.js';
 import { customerAuthService, toPublicCustomer } from './customerAuth.service.js';
 import { sendCustomerSession } from './customerAuth.routes.js';
 import { meService } from './me.service.js';
+import { customerCards } from '../cards/cards.service.js';
+import { sendImage } from '../cards/cards.routes.js';
 
 const optionalEmail = z.union([emailSchema, z.literal('').transform(() => null), z.null()]).optional();
 
@@ -52,6 +54,22 @@ router.post('/push-subscriptions', validate({ body: pushBody }), asyncHandler(as
 
 router.delete('/push-subscriptions', validate({ body: unpushBody }), asyncHandler(async (req, res) => {
   await customerAuthService.unsubscribePush(req.customer.id, req.body.endpoint);
+  noContent(res);
+}));
+
+/* ── كروت المحلات (الأختام) وصور القصّات ── */
+router.get('/cards', asyncHandler(async (req, res) => ok(res, await customerCards.list(req.customer.id))));
+
+router.patch('/cards/:shopId', validate({ params: idParams('shopId'), body: z.object({ reminders_off: z.boolean() }).strict() }),
+  asyncHandler(async (req, res) => ok(res, await customerCards.setReminders(req.customer.id, req.params.shopId, req.body.reminders_off))));
+
+router.get('/photos', asyncHandler(async (req, res) => ok(res, await customerCards.photos(req.customer.id))));
+
+router.get('/photos/:id', validate({ params: idParams('id') }), asyncHandler(async (req, res) =>
+  sendImage(res, await customerCards.photoFile(req.customer.id, req.params.id))));
+
+router.delete('/photos/:id', validate({ params: idParams('id') }), asyncHandler(async (req, res) => {
+  await customerCards.deletePhoto(req.customer.id, req.params.id);
   noContent(res);
 }));
 
