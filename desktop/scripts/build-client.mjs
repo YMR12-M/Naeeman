@@ -1,9 +1,11 @@
 /**
- * يبني لوحة المحل (`client/`) وينسخها في `desktop/app/` عشان تتشحن جوّه
- * البرنامج. البرنامج بيعرضها من `app://naeeman` من غير سيرفر ويب.
+ * يبني لوحة المحل (`client/`) وتطبيق الزبون (`mobile/`) وينسخهم في
+ * `desktop/app/` و`desktop/customer-app/` عشان يتشحنوا جوّه البرنامج.
  *
- * VITE_API_URL فاضي عمدًا: اللوحة بتطلب `/api/v1` على نفس العنوان، والبرنامج
- * بيوصّلها لسيرفر المحل اللي اتحدّد في أوّل تشغيل.
+ *  • اللوحة بتتعرض من `app://naeeman` من غير سيرفر ويب، وفي وضع «المحل هو
+ *    السيرفر» السيرفر بيقدّمها هي وتطبيق الزبون للأجهزة على الواي فاي.
+ *  • VITE_API_URL فاضي عمدًا: الواجهتين بتطلب `/api/v1` على نفس العنوان،
+ *    والبرنامج (أو السيرفر) بيوصّلها.
  */
 import { execSync } from 'node:child_process';
 import { cpSync, existsSync, rmSync } from 'node:fs';
@@ -11,12 +13,17 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const client = path.resolve(here, '../../client');
-const target = path.resolve(here, '../app');
 
-if (!existsSync(path.join(client, 'node_modules'))) execSync('npm ci', { cwd: client, stdio: 'inherit' });
-execSync('npm run build', { cwd: client, stdio: 'inherit', env: { ...process.env, VITE_API_URL: '' } });
+function build(source, target) {
+  const dir = path.resolve(here, source);
+  if (!existsSync(path.join(dir, 'node_modules'))) execSync('npm ci', { cwd: dir, stdio: 'inherit' });
+  // بنشغّل Vite من ملفه مباشرة: node_modules/.bin ممكن يكون ناقص (symlinks بتضيع على iCloud)
+  execSync(`"${process.execPath}" node_modules/vite/bin/vite.js build`, { cwd: dir, stdio: 'inherit', env: { ...process.env, VITE_API_URL: '' } });
+  const out = path.resolve(here, target);
+  rmSync(out, { recursive: true, force: true });
+  cpSync(path.join(dir, 'dist'), out, { recursive: true });
+  console.log(`✔ ${source} اتنسخ في ${path.relative(process.cwd(), out) || out}`);
+}
 
-rmSync(target, { recursive: true, force: true });
-cpSync(path.join(client, 'dist'), target, { recursive: true });
-console.log(`✔ اللوحة اتنسخت في ${path.relative(process.cwd(), target) || target}`);
+build('../../client', '../app');
+build('../../mobile', '../customer-app');

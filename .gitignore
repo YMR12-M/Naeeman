@@ -21,3 +21,6 @@ npm-debug.log*
 .DS_Store
 .idea/
 .vscode/
+
+# النسخ الاحتياطية (وضع المحل على جهاز التطوير)
+backups/

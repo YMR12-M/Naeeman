@@ -4,38 +4,119 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'" />
   <title>نعيمًا — أوّل تشغيل</title>
-  <!-- أوّل تشغيل: عنوان سيرفر المحل. نفس ألوان «صالون زمان» (حيطة نعناعي، مراية، جلد) -->
+  <!-- أوّل تشغيل: الكمبيوتر ده سيرفر المحل، أو بيتصل بسيرفر موجود. نفس ألوان «صالون زمان» -->
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #A9D6C4; color: #143C38;
+    body { margin: 0; min-height: 100vh; display: grid; place-items: start center; padding: 28px 12px 40px; background: #A9D6C4; color: #143C38;
       font-family: 'Segoe UI', Tahoma, 'Geeza Pro', sans-serif; }
-    .mirror { width: min(460px, 92vw); padding: 32px 28px; background: #E9F1EE; border: 5px solid #B9BFC4; border-radius: 10px;
+    .mirror { width: min(560px, 96vw); padding: 28px 26px; background: #E9F1EE; border: 5px solid #B9BFC4; border-radius: 10px;
       box-shadow: inset 0 0 0 1px #5E676E, 0 0 0 1px #5E676E; }
-    .sign { display: inline-block; padding: 4px 28px 8px; margin-bottom: 18px; background: #143C38; color: #F3EBDD; border-radius: 3px;
+    .sign { display: inline-block; padding: 4px 28px 8px; margin-bottom: 16px; background: #143C38; color: #F3EBDD; border-radius: 3px;
       font-size: 1.6rem; font-weight: 700; outline: 1.5px solid #F3EBDD; outline-offset: -5px; }
     h1 { font-size: 1.25rem; margin: 0 0 6px; }
-    p { margin: 0 0 18px; color: #46605B; line-height: 1.7; }
-    label { display: block; font-weight: 600; margin-bottom: 6px; }
-    input { width: 100%; min-height: 46px; padding: 0 12px; font-size: 1.05rem; direction: ltr; text-align: left;
+    h2 { font-size: 1.05rem; margin: 18px 0 8px; }
+    p { margin: 0 0 14px; color: #46605B; line-height: 1.7; }
+    label { display: block; font-weight: 600; margin-bottom: 5px; }
+    input[type=text], input[type=password], input[type=email], input[type=number] { width: 100%; min-height: 44px; padding: 0 12px; font-size: 1.02rem;
       border: 1.5px solid #5E676E; border-radius: 6px; background: #fff; color: #143C38; }
-    input:focus { outline: none; box-shadow: 0 0 0 3px rgba(31, 63, 138, 0.45); }
-    button { margin-top: 16px; width: 100%; min-height: 48px; font-size: 1.1rem; font-weight: 600; color: #F3EBDD; background: #8E1F1B;
+    input.ltr { direction: ltr; text-align: left; }
+    input:focus, button:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(31, 63, 138, 0.45); }
+    .field { margin-bottom: 12px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .hint { font-size: 0.85rem; margin-top: 5px; color: #46605B; }
+    .modes { display: grid; gap: 10px; margin: 14px 0 6px; }
+    .mode { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1.5px solid #5E676E; border-radius: 8px; background: #fff; cursor: pointer; }
+    .mode input { margin-top: 5px; accent-color: #8E1F1B; }
+    .mode.on { border-color: #8E1F1B; box-shadow: 0 0 0 2px rgba(142, 31, 27, 0.25); }
+    .mode b { display: block; margin-bottom: 2px; }
+    .mode span { color: #46605B; font-size: 0.92rem; line-height: 1.55; }
+    .panel[hidden] { display: none; }
+    .db-choice { display: grid; gap: 8px; margin-bottom: 10px; }
+    .db-choice label { display: flex; gap: 8px; align-items: center; font-weight: 500; margin: 0; }
+    .db-choice label.off { opacity: .55; }
+    button { margin-top: 14px; min-height: 48px; font-size: 1.08rem; font-weight: 600; color: #F3EBDD; background: #8E1F1B; padding: 0 22px;
       border: 0; border-radius: 10px; outline: 1.5px dashed #E3B9A6; outline-offset: -6px; cursor: pointer; }
+    button.wide { width: 100%; }
+    button.ghost { margin-top: 0; min-height: 44px; background: transparent; color: #143C38; outline: 1.5px solid #5E676E; outline-offset: -1px; font-size: .95rem; }
     button:disabled { opacity: 0.6; cursor: wait; }
-    .error { margin-top: 12px; padding: 10px 12px; border-inline-start: 4px solid #9B1C1C; background: #F6DEDC; border-radius: 6px; display: none; }
-    .hint { font-size: 0.85rem; margin-top: 6px; color: #46605B; }
+    .error { margin-top: 12px; padding: 10px 12px; border-inline-start: 4px solid #9B1C1C; background: #F6DEDC; border-radius: 6px; line-height: 1.6; }
+    .error[hidden] { display: none; }
+    .folder { display: flex; gap: 8px; align-items: center; }
+    .folder output { flex: 1; direction: ltr; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #46605B; font-size: .9rem; }
+    details { margin: 6px 0 12px; } summary { cursor: pointer; font-weight: 600; }
   </style>
 </head>
 <body>
   <form class="mirror" id="form" novalidate>
     <div class="sign">نعيمًا</div>
-    <h1>أهلًا — فين سيرفر المحل؟</h1>
-    <p>اكتب عنوان سيرفر نعيمًا اللي المحل شغّال عليه. لو السيرفر على نفس الكمبيوتر اكتب <bdi>localhost:4030</bdi>.</p>
-    <label for="url">عنوان السيرفر</label>
-    <input id="url" name="url" autocomplete="url" placeholder="https://naeeman-api.example.com" autofocus />
-    <div class="hint">تقدر تغيّره بعدين من قايمة «نعيمًا» ← «سيرفر المحل».</div>
-    <div class="error" id="error" role="alert"></div>
-    <button type="submit" id="save">اتصل</button>
+    <h1>أهلًا — الكمبيوتر ده هيشتغل إزاي؟</h1>
+    <p>اختار مرّة واحدة. تقدر تغيّر بعدين من قايمة «نعيمًا» ← «سيرفر المحل».</p>
+
+    <div class="modes" role="radiogroup" aria-label="وضع التشغيل">
+      <label class="mode" id="mode-hub-card">
+        <input type="radio" name="mode" value="hub" />
+        <div><b>الكمبيوتر ده هو سيرفر المحل</b>
+          <span>السيرفر والقاعدة بيشتغلوا هنا. التلفزيون والكشك وتابلت الكرسي بيكلّموه على واي فاي المحل، والشغل جوّه المحل ما بيقفش لو النت قطع.</span></div>
+      </label>
+      <label class="mode" id="mode-remote-card">
+        <input type="radio" name="mode" value="remote" />
+        <div><b>اتصل بسيرفر موجود</b>
+          <span>السيرفر على كمبيوتر تاني في المحل أو على الإنترنت (Render مثلًا).</span></div>
+      </label>
+    </div>
+
+    <section class="panel" id="hub-new" hidden>
+      <h2>بيانات المحل والمالك</h2>
+      <div class="field"><label for="shop">اسم المحل</label><input type="text" id="shop" autocomplete="off" /></div>
+      <div class="row">
+        <div class="field"><label for="owner-name">اسمك</label><input type="text" id="owner-name" autocomplete="name" /></div>
+        <div class="field"><label for="owner-email">البريد الإلكتروني</label><input class="ltr" type="email" id="owner-email" autocomplete="email" /></div>
+      </div>
+      <div class="field"><label for="owner-password">كلمة السر</label><input class="ltr" type="password" id="owner-password" autocomplete="new-password" />
+        <div class="hint">12 حرفًا على الأقل، وفيها 3 أنواع من: حروف صغيرة، حروف كبيرة، أرقام، رموز.</div></div>
+      <div class="field"><label for="owner-password2">أعد كتابة كلمة السر</label><input class="ltr" type="password" id="owner-password2" autocomplete="new-password" /></div>
+
+      <h2>قاعدة البيانات</h2>
+      <div class="db-choice">
+        <label id="db-bundled-label"><input type="radio" name="db" value="bundled" /> MySQL متشحونة مع البرنامج (من غير ما تسطّب حاجة)</label>
+        <label><input type="radio" name="db" value="external" /> MySQL متسطّبة على الجهاز</label>
+      </div>
+      <div id="db-external">
+        <div class="row">
+          <div class="field"><label for="db-host">العنوان</label><input class="ltr" type="text" id="db-host" value="127.0.0.1" /></div>
+          <div class="field"><label for="db-port">البورت</label><input class="ltr" type="number" id="db-port" value="3306" /></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="db-user">المستخدم</label><input class="ltr" type="text" id="db-user" value="root" /></div>
+          <div class="field"><label for="db-password">كلمة السر (لو فيه)</label><input class="ltr" type="password" id="db-password" autocomplete="off" /></div>
+        </div>
+      </div>
+
+      <details>
+        <summary>إعدادات تانية (اختياري)</summary>
+        <div class="field" style="margin-top:10px"><label>فولدر النسخ على السحابة</label>
+          <div class="folder"><button type="button" class="ghost" id="pick">اختار فولدر…</button><output id="folder">من غير</output></div>
+          <div class="hint">فولدر Google Drive أو OneDrive على الجهاز: النسخ الاحتياطية بتتنسخ فيه وبتطلع على السحابة لوحدها.</div></div>
+        <div class="row">
+          <div class="field"><label for="api-port">بورت اللوحة والأجهزة</label><input class="ltr" type="number" id="api-port" value="4030" /></div>
+          <div class="field"><label for="customer-port">بورت تطبيق الزبون</label><input class="ltr" type="number" id="customer-port" value="4031" /></div>
+        </div>
+      </details>
+    </section>
+
+    <section class="panel" id="hub-ready" hidden>
+      <h2>سيرفر المحل اتجهّز قبل كده</h2>
+      <p>هيتشغّل بنفس الإعدادات والبيانات اللي عندك.</p>
+    </section>
+
+    <section class="panel" id="remote" hidden>
+      <div class="field"><label for="url">عنوان السيرفر</label>
+        <input class="ltr" type="text" id="url" autocomplete="url" placeholder="https://naeeman-api.example.com" />
+        <div class="hint">لو السيرفر على كمبيوتر تاني في المحل اكتب مثلًا <bdi>192.168.1.10:4030</bdi>.</div></div>
+    </section>
+
+    <div class="error" id="error" role="alert" hidden></div>
+    <button type="submit" class="wide" id="save" hidden>ابدأ</button>
   </form>
   <script src="setup.js"></script>
 </body>

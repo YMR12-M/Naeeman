@@ -1,5 +1,6 @@
 /**
- * إعدادات البرنامج على الجهاز (userData/config.json): عنوان سيرفر المحل بس.
+ * إعدادات البرنامج على الجهاز (userData/config.json): الوضع (سيرفر المحل أو
+ * اتصال بسيرفر)، وعنوان السيرفر، وإعدادات وضع المحل، وطابعة الإيصالات.
  * وتوكن تجديد جلسة الموظف في ملف لوحده مشفّر بـ safeStorage (Keychain على
  * الماك، وDPAPI على ويندوز). لو التشفير مش متاح، التوكن بيفضل في الذاكرة
  * والموظف يدخل تاني كل ما البرنامج يفتح — أحسن من ملف مكشوف.
@@ -16,7 +17,8 @@ export function readConfig() {
 
 export function writeConfig(patch) {
   const next = { ...readConfig(), ...patch };
-  writeFileSync(file('config.json'), JSON.stringify(next, null, 2));
+  // فيه سرّ الجلسات وكلمة سر القاعدة في وضع المحل: للمستخدم بس
+  writeFileSync(file('config.json'), JSON.stringify(next, null, 2), { mode: 0o600 });
   return next;
 }
 

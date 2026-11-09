@@ -58,3 +58,34 @@ jobs:
       - run: npm test
       - run: npm run check:contrast
       - run: npm run build
+
+  desktop:
+    name: برنامج الكمبيوتر (وضع المحل — تشغيل حقيقي للسيرفر)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      NAEEMAN_TEST_DB_PASSWORD: root
+      # من غير تحميل ملف Electron (اختبار «Electron كـ Node» بيتخطّى لوحده)
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # السيرفر (اللي بيتشغّل فعلًا)، واللوحة (jsdom لاختبار صفحة أوّل تشغيل)
+      - run: npm ci
+        working-directory: server
+      - run: npm ci
+        working-directory: client
+      - run: npm ci
+        working-directory: desktop
+      - run: npm test
+        working-directory: desktop

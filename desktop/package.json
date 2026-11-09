@@ -12,7 +12,10 @@
     "start": "npm run build:client && electron .",
     "dev": "electron .",
     "smoke": "node scripts/smoke.mjs",
-    "dist": "npm run build:client && electron-builder"
+    "dist": "npm run build:client && npm run stage:server && electron-builder",
+    "test": "node --test --test-concurrency=1 \"test/**/*.test.mjs\"",
+    "stage:server": "node scripts/stage-server.mjs",
+    "smoke:hub": "node scripts/smoke-hub.mjs"
   },
   "devDependencies": {
     "electron": "^43.8.0",
@@ -26,7 +29,6 @@
     },
     "files": [
       "src/**",
-      "app/**",
       "package.json"
     ],
     "mac": {
@@ -53,6 +55,27 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "language": "1025"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "app",
+        "to": "panel"
+      },
+      {
+        "from": "customer-app",
+        "to": "customer-app"
+      },
+      {
+        "from": "server-stage",
+        "to": "server"
+      },
+      {
+        "from": "vendor/mysql",
+        "to": "mysql",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
   }
 }

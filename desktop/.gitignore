@@ -1,2 +1,5 @@
 app/
+customer-app/
+server-stage/
 release/
+vendor/mysql/
