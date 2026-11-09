@@ -311,8 +311,14 @@ export function createDemo(cfg) {
         result = { status: 500, body: { success: false, message: 'حصل خطأ في النسخة التجريبية', code: 'DEMO_ERROR' } };
       }
     }
-    save();
-    if (method !== 'GET') notify();
+    if (result.status >= 400) {
+      // زي rollback المعاملة في السيرفر: الطلب اللي فشل ما يسيبش نص تعديل
+      const before = load();
+      if (before) db = before;
+    } else {
+      save();
+      if (method !== 'GET') notify();
+    }
 
     if (result.stream) return respond(result, signal);
     await new Promise((resolve) => { setTimeout(resolve, 40 + Math.floor(Math.random() * 80)); });
