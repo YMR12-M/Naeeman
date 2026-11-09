@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm --prefix client ci && npm --prefix mobile ci",
+  "buildCommand": "node demo/build.mjs",
+  "outputDirectory": "client/dist",
+  "rewrites": [
+    { "source": "/app", "destination": "/app/index.html" },
+    { "source": "/app/(.*)", "destination": "/app/index.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
