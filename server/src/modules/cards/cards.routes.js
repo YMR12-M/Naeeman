@@ -7,12 +7,15 @@ import { z } from 'zod';
 import { authenticate } from '../../middleware/authenticate.js';
 import { requirePermission } from '../../middleware/authorize.js';
 import { validate } from '../../middleware/validate.js';
+import { passwordResetLimiter } from '../../middleware/rateLimiters.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ok, created, noContent, paged } from '../../utils/response.js';
 import { audit } from '../../utils/audit.js';
 import { MAX_PHOTO_BYTES } from '../../utils/storage.js';
 import { idParams, idSchema, optionalText, pagingSchema, requiredText } from '../../utils/schemas.js';
-import { addPhoto, cardsService as service, deletePhoto, photoFile } from './cards.service.js';
+import {
+  addPhoto, cardsService as service, deletePhoto, issueLinkCode, photoFile,
+} from './cards.service.js';
 
 export const rawImage = express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: MAX_PHOTO_BYTES });
 
@@ -60,6 +63,17 @@ router.post('/:id/stamps', requirePermission('cards.stamps'), validate({ params:
   asyncHandler(async (req, res) => {
     const result = await service.adjustStamps(req.shopId, req.params.id, req.body.delta, req.body.note, req.user.id);
     await audit(req, { action: 'card.stamps', entity: 'card', entityId: req.params.id, after: { ...req.body, stamps: result.stamps } });
+    ok(res, result);
+  }));
+
+/**
+ * كود ربط الكارت بحساب التطبيق: الاستقبال بيطلّعه وهو شايف صاحب الكارت
+ * قدّامه (رقم الحساب مش متأكّد منه). بيتسجّل في السجل مين طلّعه ولمين.
+ */
+router.post('/:id/link-code', requirePermission('cards.write'), passwordResetLimiter, validate({ params: idParams('id') }),
+  asyncHandler(async (req, res) => {
+    const result = await issueLinkCode(req.shopId, req.params.id, req.user.id);
+    await audit(req, { action: 'card.link_code', entity: 'card', entityId: result.card.id, after: { name: result.card.name, phone: result.card.phone } });
     ok(res, result);
   }));
 

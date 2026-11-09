@@ -75,6 +75,7 @@
 | GET | `/cards?q=` · `/cards/:id` · `/cards/reminders` (وحشونا) | `cards.read` |
 | PATCH | `/cards/:id` `{ name?, notes?, reminders_off? }` · POST `/cards/:id/reminded` | `cards.write` |
 | POST | `/cards/:id/stamps` `{ delta, note }` (تعديل يدوي) | `cards.stamps` |
+| POST | `/cards/:id/link-code` ← `{ code, expires_in_minutes, card }` (كود ربط كارت الموبايل بحساب التطبيق: 6 أرقام، ربع ساعة، مرّة واحدة) | `cards.write` |
 | GET | `/cards/:id/photos/:photoId` (الصورة، بتوكن) | `cards.read` |
 | POST · DELETE | `/cards/:id/photos` (صورة خام: `Content-Type: image/jpeg\|png\|webp`) · `/cards/:id/photos/:photoId` | `cards.write` |
 | GET | `/reports/today?date=` (من الفواتير: طرق الدفع والمنتجات) · `/reports/range?from=&to=` | `reports.read` |
@@ -106,10 +107,11 @@
 | POST | `/customer-auth/reset-with-code` `{ phone, code, new_password }` | بكود من المحل |
 | GET · PATCH | `/me` · POST `/me/change-password` | |
 | POST · DELETE | `/me/push-subscriptions` | Web Push |
-| GET | `/me/tickets` (السجل) · `/me/tickets/active` · `/me/tickets/:id` | |
+| GET | `/me/tickets` (السجل) · `/me/tickets/active` · `/me/tickets/:id` | السجل فيه كمان زيارات الكارت اللي اترَبط (قراية بس) |
 | POST | `/me/tickets` `{ shop_slug, service_ids, barber_id? }` | خُد دور |
 | POST | `/me/tickets/:id/coming` · `/delay` · `/cancel` · `/check-in` `{ code }` | |
 | GET · PATCH | `/me/cards` (كروت الأختام في كل محل زاره) · `/me/cards/:shopId` `{ reminders_off }` | بيظهر الكارت بعد أوّل دور بالتطبيق في المحل |
+| POST | `/me/cards/link` `{ code }` | يربط كارت الموبايل القديم (بنفس رقم الحساب) بكود من الاستقبال، والكارتين بيتدمجوا. 5 محاولات غلط والكود يتحرق |
 | GET · DELETE | `/me/photos` · `/me/photos/:id` (قصّاته، وبيمسحها) | الصورة بتوكنه هو بس |
 | GET | `/me/stream` (SSE) | الدور الشغّال لايف |
 

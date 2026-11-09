@@ -95,20 +95,59 @@ describe('كارت الزبون', () => {
     assert.equal(row.shop_customer_id, null);
   });
 
-  test('نزّل التطبيق بنفس الرقم: الكارت نفسه بيترَبط بحسابه بأختامه', async () => {
+  test('حساب برقم كارت قديم ما بيشوفش الكارت لوحده (الرقم مش متأكّد منه)', async () => {
     const token = await register('01011112222', 'كريم');
     const take = await http.post(`${API}/me/tickets`).set(bearer(token)).send({ shop_slug: 'cards-shop', service_ids: [cut.id] });
     assert.equal(take.status, 201, JSON.stringify(take.body));
-    const card = await queryOne('SELECT id, customer_id, stamps, visits FROM shop_customers WHERE id = ?', [cardId]);
-    assert.ok(card.customer_id);
-    assert.equal(card.stamps, 2);
-    assert.equal(card.visits, 2);
+    const old = await queryOne('SELECT customer_id, stamps FROM shop_customers WHERE id = ?', [cardId]);
+    assert.deepEqual(old, { customer_id: null, stamps: 2 });
+    const mine = (await http.get(`${API}/me/cards`).set(bearer(token))).body.data;
+    assert.equal(mine.length, 1);
+    assert.notEqual(mine[0].id, cardId);
+    assert.equal(mine[0].loyalty.stamps, 0);
+    await http.post(`${API}/me/tickets/${take.body.data.ticket.id}/cancel`).set(bearer(token));
+
+    // زيارة جديدة بالرقم من الاستقبال بتروح لكارت الموبايل، مش للحساب
+    const account = await queryOne('SELECT phone FROM shop_customers WHERE id = ?', [mine[0].id]);
+    assert.equal(account.phone, null);
+  });
+
+  test('الربط بكود من الاستقبال: الكارتين بيبقوا واحد بالأختام والزيارات', async () => {
+    const token = (await http.post(`${API}/customer-auth/login`).set('X-Client-Type', 'mobile')
+      .send({ phone: '01011112222', password: 'zaboon-pass-1' })).body.data.tokens.access_token;
+    const issued = await cashier.post(`/cards/${cardId}/link-code`);
+    assert.equal(issued.status, 200, JSON.stringify(issued.body));
+    assert.match(issued.body.data.code, /^\d{6}$/);
+    const audit = await queryOne("SELECT entity_id FROM audit_logs WHERE action = 'card.link_code' ORDER BY id DESC LIMIT 1");
+    assert.equal(audit.entity_id, cardId);
+
+    const wrongCode = issued.body.data.code === '000000' ? '111111' : '000000';
+    const wrong = await http.post(`${API}/me/cards/link`).set(bearer(token)).send({ code: wrongCode });
+    assert.equal(wrong.status, 400);
+    assert.equal(wrong.body.code, 'LINK_INVALID');
+
+    // حساب برقم تاني ما يقدرش يستعمل الكود
+    const other = await register('01088887777', 'حد تاني');
+    assert.equal((await http.post(`${API}/me/cards/link`).set(bearer(other)).send({ code: issued.body.data.code })).status, 400);
+
+    const linked = await http.post(`${API}/me/cards/link`).set(bearer(token)).send({ code: issued.body.data.code });
+    assert.equal(linked.status, 200, JSON.stringify(linked.body));
+    assert.equal(linked.body.data.shop_name, 'صالون الكروت');
+    assert.equal(linked.body.data.loyalty.stamps, 2);
+    assert.equal(linked.body.data.loyalty.eligible, true);
+    assert.equal(linked.body.data.visits, 2);
+    const again = await http.post(`${API}/me/cards/link`).set(bearer(token)).send({ code: issued.body.data.code });
+    assert.equal(again.status, 400, 'الكود مرّة واحدة');
+
+    const merged = await queryOne('SELECT id, customer_id, phone FROM shop_customers WHERE id = ?', [linked.body.data.id]);
+    assert.ok(merged.customer_id);
+    assert.equal(merged.phone, '+201011112222');
+    assert.equal(await queryOne('SELECT id FROM shop_customers WHERE id = ?', [cardId]), linked.body.data.id === cardId ? { id: cardId } : null);
+    cardId = linked.body.data.id;
 
     const mine = (await http.get(`${API}/me/cards`).set(bearer(token))).body.data;
     assert.equal(mine.length, 1);
-    assert.equal(mine[0].shop_name, 'صالون الكروت');
-    assert.equal(mine[0].loyalty.eligible, true);
-    await http.post(`${API}/me/tickets/${take.body.data.ticket.id}/cancel`).set(bearer(token));
+    assert.equal((await cashier.post(`/cards/${cardId}/link-code`)).body.code, 'CARD_ALREADY_LINKED');
   });
 
   test('الملاحظات والبحث بالاسم والموبايل', async () => {
@@ -121,7 +160,9 @@ describe('كارت الزبون', () => {
     assert.equal(card.notes, 'درجة 2 على الجناب، ما بيحبش الجِل');
     assert.equal(card.visits_list.length, 2);
     assert.equal(card.visits_list[0].barber_name, 'حسن');
-    assert.equal(card.loyalty_events.length, 2);
+    assert.equal(card.loyalty_events.length, 3);
+    assert.equal(card.loyalty_events[0].type, 'merge');
+    assert.equal(card.app_phone, '+201011112222');
   });
 
   test('المكافأة: أغلى خدمة ببلاش، والزيارة دي ما بتاخدش ختم', async () => {
@@ -214,9 +255,12 @@ describe('صور القصّات', () => {
 
   test('الزبون يشوف صوره هو بس ويقدر يمسحها', async () => {
     const token = await register('01099990000', 'سامح');
-    // الكارت بيترَبط بالحساب أوّل ما ياخد دور
-    const take = await http.post(`${API}/me/tickets`).set(bearer(token)).send({ shop_slug: 'cards-shop', service_ids: [cut.id] });
-    await http.post(`${API}/me/tickets/${take.body.data.ticket.id}/cancel`).set(bearer(token));
+    // قبل الربط: مفيش صور (الحساب لسه ما اتربطش بكارت الموبايل)
+    assert.equal((await http.get(`${API}/me/photos`).set(bearer(token))).body.data.length, 0);
+    const { code } = (await cashier.post(`/cards/${cardId}/link-code`)).body.data;
+    const linked = await http.post(`${API}/me/cards/link`).set(bearer(token)).send({ code });
+    assert.equal(linked.status, 200, JSON.stringify(linked.body));
+    cardId = linked.body.data.id;
 
     const photos = (await http.get(`${API}/me/photos`).set(bearer(token))).body.data;
     assert.equal(photos.length, 2);
@@ -227,8 +271,15 @@ describe('صور القصّات', () => {
     const stranger = await register('01077776666', 'غريب');
     assert.equal((await http.get(`${API}/me/photos/${photoId}`).set(bearer(stranger))).status, 404);
 
+    // الزيارة القديمة (من الاستقبال) بقت في «سجلّي» بعد الربط، وتفتح بفاتورتها
     const history = (await http.get(`${API}/me/tickets`).set(bearer(token))).body.data;
-    assert.ok(history.length >= 1);
+    assert.equal(history.length, 1);
+    const visit = await http.get(`${API}/me/tickets/${history[0].id}`).set(bearer(token));
+    assert.equal(visit.status, 200);
+    assert.equal(visit.body.data.ticket.status, 'done');
+    assert.equal((await http.get(`${API}/me/tickets/${history[0].id}`).set(bearer(stranger))).status, 404);
+    // وما ينفعش يعمل فعل عليها (أدوار التطبيق بس)
+    assert.equal((await http.post(`${API}/me/tickets/${history[0].id}/cancel`).set(bearer(token))).status, 404);
 
     assert.equal((await http.delete(`${API}/me/photos/${photoId}`).set(bearer(token))).status, 204);
     assert.equal((await http.get(`${API}/cards/${cardId}/photos/${photoId}`).set(bearer(ctx.token))).status, 404);

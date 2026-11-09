@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { authenticateCustomer } from '../../middleware/authenticateCustomer.js';
 import { validate } from '../../middleware/validate.js';
 import { idempotent } from '../../middleware/idempotency.js';
-import { checkinLimiter, ticketLimiter } from '../../middleware/rateLimiters.js';
+import { checkinLimiter, passwordResetLimiter, ticketLimiter } from '../../middleware/rateLimiters.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ok, created, noContent } from '../../utils/response.js';
 import { customerPasswordSchema, emailSchema, idParams, idSchema, slugSchema } from '../../utils/schemas.js';
@@ -59,6 +59,10 @@ router.delete('/push-subscriptions', validate({ body: unpushBody }), asyncHandle
 
 /* ── كروت المحلات (الأختام) وصور القصّات ── */
 router.get('/cards', asyncHandler(async (req, res) => ok(res, await customerCards.list(req.customer.id))));
+
+/** ربط كارت المحل القديم (من قبل التطبيق) بكود من الاستقبال */
+router.post('/cards/link', passwordResetLimiter, validate({ body: z.object({ code: z.string().regex(/^\d{6}$/, 'الكود 6 أرقام') }).strict() }),
+  asyncHandler(async (req, res) => ok(res, await customerCards.linkWithCode(req.customer.id, req.body.code))));
 
 router.patch('/cards/:shopId', validate({ params: idParams('shopId'), body: z.object({ reminders_off: z.boolean() }).strict() }),
   asyncHandler(async (req, res) => ok(res, await customerCards.setReminders(req.customer.id, req.params.shopId, req.body.reminders_off))));

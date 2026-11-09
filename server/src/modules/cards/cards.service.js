@@ -2,21 +2,25 @@
  * ═══════════════════════════════════════════════════════════════
  *  كارت الزبون في المحل
  *
- *  كارت واحد لكل زبون في كل محل، مربوط بحساب التطبيق أو برقم الموبايل.
- *  `linkCard` هي الوحيدة اللي بتعمل أو بتربط كارت (وقت أخد الدور، أو
- *  فاتورة بيع باسم زبون)، وبتمشي بالترتيب ده:
- *    1) حساب التطبيق ← كارته في المحل ده لو موجود.
- *    2) مفيش؟ كارت بنفس الموبايل لسه مش مربوط بحساب ← يترَبط بالحساب
- *       (زبون شارع نزّل التطبيق بعدين: نفس الكارت بأختامه وصوره).
- *    3) مفيش خالص ← كارت جديد.
+ *  كارت لكل زبون في كل محل. `linkCard` هي الوحيدة اللي بتعمل كارت (وقت
+ *  أخد الدور، أو فاتورة بيع باسم زبون):
+ *    • حساب التطبيق ← كارت الحساب في المحل ده (أو كارت جديد من غير رقم).
+ *    • زبون الشارع والكشك ← كارت الموبايل (بالرقم اللي اتكتب).
  *  زبون من غير حساب ولا موبايل مالوش كارت.
+ *
+ *  رقم الحساب مش متأكّد منه (مفيش SMS)، فالحساب ما بيترَبطش لوحده بكارت
+ *  الموبايل القديم: الاستقبال بيطلّع كود (`issueLinkCode`) وهو شايف صاحب
+ *  الكارت، والزبون بيكتبه في التطبيق (`customerCards.linkWithCode`)،
+ *  والكارتين بيتدمجوا في كارت واحد.
  * ═══════════════════════════════════════════════════════════════
  */
-import { query, queryOne, transaction, isDuplicate } from '../../config/db.js';
+import crypto from 'node:crypto';
+import { query, queryOne, execute, transaction, isDuplicate } from '../../config/db.js';
 import { env } from '../../config/env.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { pageMeta } from '../../utils/response.js';
 import { readPhoto, removePhoto, savePhoto } from '../../utils/storage.js';
+import { sha256 } from '../../utils/security.js';
 import { loadSettings } from '../shop/shop.service.js';
 
 const CARD_COLUMNS = `id, shop_id, customer_id, phone, name, notes, stamps, rewards_redeemed, visits, total_spent,
@@ -42,20 +46,9 @@ export async function linkCard(tx, { shopId, customerId = null, phone = null, na
   if (customerId) {
     const own = await tx.queryOne('SELECT id FROM shop_customers WHERE shop_id = ? AND customer_id = ? FOR UPDATE', [shopId, customerId]);
     if (own) return own.id;
-    const account = await tx.queryOne('SELECT phone, name FROM customers WHERE id = ?', [customerId]);
-    const accountPhone = account?.phone ?? phone;
-    if (accountPhone) {
-      const byPhone = await tx.queryOne(
-        'SELECT id, customer_id FROM shop_customers WHERE shop_id = ? AND phone = ? FOR UPDATE',
-        [shopId, accountPhone],
-      );
-      if (byPhone && byPhone.customer_id === null) {
-        await tx.execute('UPDATE shop_customers SET customer_id = ? WHERE id = ?', [customerId, byPhone.id]);
-        return byPhone.id;
-      }
-      // الرقم على كارت حساب تاني (اتغيّر رقمه): كارت جديد من غير موبايل عشان القيد الفريد
-      return insertCard(tx, { shopId, customerId, phone: byPhone ? null : accountPhone, name: account?.name ?? cleanName });
-    }
+    // كارت جديد للحساب من غير رقم: الرقم مش متأكّد منه، وكارت الموبايل القديم
+    // (لو فيه) بيترَبط بكود من الاستقبال بس
+    const account = await tx.queryOne('SELECT name FROM customers WHERE id = ?', [customerId]);
     return insertCard(tx, { shopId, customerId, phone: null, name: account?.name ?? cleanName });
   }
 
@@ -92,6 +85,71 @@ export async function recordVisit(tx, cardId, barberId) {
       WHERE id = ?`,
     [barberId ?? null, cardId],
   );
+}
+
+/* ═══════════════════ ربط كارت الموبايل بحساب التطبيق ═══════════════════ */
+
+const LINK_CODE_MINUTES = 15;
+const LINK_CODE_ATTEMPTS = 5;
+const linkCodeHash = (id, code) => sha256(`card-link:${id}:${code}`);
+
+/**
+ * يدمج كارت الموبايل (source) في كارت الحساب (target): الأدوار والفواتير
+ * والصور والأختام والزيارات والملاحظات، وبعدين يمسح كارت الموبايل والرقم
+ * يروح لكارت الحساب. لازم جوّه معاملة والكارتين مقفولين.
+ */
+async function mergeCards(tx, source, target) {
+  for (const table of ['queue_tickets', 'bills', 'customer_photos', 'loyalty_events']) {
+    await tx.execute(`UPDATE ${table} SET shop_customer_id = ? WHERE shop_customer_id = ?`, [target.id, source.id]);
+  }
+  const notes = [source.notes, target.notes].filter(Boolean).join('\n').slice(0, 1000) || null;
+  const lastBarber = source.last_visit_at && (!target.last_visit_at || source.last_visit_at > target.last_visit_at)
+    ? source.last_barber_id : target.last_barber_id;
+  await tx.execute('DELETE FROM shop_customers WHERE id = ?', [source.id]);
+  await tx.execute(
+    `UPDATE shop_customers SET phone = ?, notes = ?,
+            stamps = stamps + ?, rewards_redeemed = rewards_redeemed + ?, visits = visits + ?, total_spent = total_spent + ?,
+            first_visit_at = CASE WHEN first_visit_at IS NULL OR (? IS NOT NULL AND ? < first_visit_at) THEN ? ELSE first_visit_at END,
+            last_visit_at = CASE WHEN last_visit_at IS NULL OR (? IS NOT NULL AND ? > last_visit_at) THEN ? ELSE last_visit_at END,
+            last_barber_id = ?, reminders_off = reminders_off OR ?
+      WHERE id = ?`,
+    [
+      source.phone, notes, source.stamps, source.rewards_redeemed, source.visits, source.total_spent,
+      source.first_visit_at, source.first_visit_at, source.first_visit_at,
+      source.last_visit_at, source.last_visit_at, source.last_visit_at,
+      lastBarber, source.reminders_off, target.id,
+    ],
+  );
+  if (source.stamps > 0) {
+    const { stamps } = await tx.queryOne('SELECT stamps FROM shop_customers WHERE id = ?', [target.id]);
+    await tx.execute(
+      `INSERT INTO loyalty_events (shop_id, shop_customer_id, type, delta, stamps_after, note)
+       VALUES (?, ?, 'merge', ?, ?, 'ربط كارت الموبايل بالتطبيق')`,
+      [target.shop_id, target.id, source.stamps, stamps],
+    );
+  }
+}
+
+/**
+ * الاستقبال بيطلّع كود ربط لكارت موبايل (زبون الشارع) وهو شايف صاحبه
+ * قدّامه. الكود 6 أرقام، صالح ربع ساعة ومرّة واحدة، وأي كود قديم بيتلغي.
+ */
+export async function issueLinkCode(shopId, cardId, userId) {
+  const card = await queryOne('SELECT id, name, phone, customer_id FROM shop_customers WHERE id = ? AND shop_id = ?', [cardId, shopId]);
+  if (!card) throw ApiError.notFound('الكارت غير موجود', { code: 'CARD_NOT_FOUND' });
+  if (card.customer_id) throw ApiError.conflict('الكارت ده مربوط بحساب تطبيق بالفعل', { code: 'CARD_ALREADY_LINKED' });
+  if (!card.phone) throw ApiError.conflict('الكارت ده مالوش رقم موبايل — اكتب الرقم الأول', { code: 'CARD_NO_PHONE' });
+  const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+  await transaction(async (tx) => {
+    await tx.execute('UPDATE card_link_codes SET used_at = NOW() WHERE shop_customer_id = ? AND used_at IS NULL', [cardId]);
+    const inserted = await tx.execute(
+      `INSERT INTO card_link_codes (shop_id, shop_customer_id, expires_at, issued_by)
+       VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE), ?)`,
+      [shopId, cardId, LINK_CODE_MINUTES, userId],
+    );
+    await tx.execute('UPDATE card_link_codes SET code_hash = ? WHERE id = ?', [linkCodeHash(inserted.insertId, code), inserted.insertId]);
+  });
+  return { code, expires_in_minutes: LINK_CODE_MINUTES, card: { id: card.id, name: card.name, phone: card.phone } };
 }
 
 /* ═══════════════════ كارت الأختام ═══════════════════ */
@@ -234,8 +292,9 @@ export const cardsService = {
     const offset = (page - 1) * pageSize;
     const rows = await query(
       `SELECT sc.id, sc.name, sc.phone, sc.customer_id, sc.stamps, sc.visits, sc.total_spent, sc.last_visit_at,
-              sc.notes, b.name AS last_barber_name
+              sc.notes, b.name AS last_barber_name, c.phone AS app_phone
          FROM shop_customers sc LEFT JOIN barbers b ON b.id = sc.last_barber_id
+         LEFT JOIN customers c ON c.id = sc.customer_id
         WHERE ${where}
         ORDER BY sc.last_visit_at IS NULL, sc.last_visit_at DESC, sc.id DESC
         LIMIT ${Number(pageSize)} OFFSET ${Number(offset)}`,
@@ -274,8 +333,11 @@ export const cardsService = {
       ),
       card.last_barber_id ? queryOne('SELECT id, name FROM barbers WHERE id = ?', [card.last_barber_id]) : null,
     ]);
+    const account = card.customer_id ? await queryOne('SELECT phone FROM customers WHERE id = ?', [card.customer_id]) : null;
     return {
       ...card,
+      // رقم حساب التطبيق (مش متأكّد منه) للعرض بس — مش للبحث ولا للربط
+      app_phone: account?.phone ?? null,
       last_barber: barber,
       loyalty: await loyaltyFor(shopId, card.stamps),
       visits_list: visits.map((row) => ({
@@ -367,6 +429,65 @@ export const customerCards = {
     const result = await query('UPDATE shop_customers SET reminders_off = ? WHERE customer_id = ? AND shop_id = ?', [off, customerId, shopId]);
     if (result.affectedRows === 0) throw ApiError.notFound('مالكش كارت في المحل ده', { code: 'CARD_NOT_FOUND' });
     return { reminders_off: off };
+  },
+
+  /**
+   * الزبون كتب كود الربط اللي الاستقبال اداهوله: كارت الموبايل اللي رقمه
+   * نفس رقم الحساب بيتدمج في كارت الحساب في المحل ده (أو بيترَبط بيه لو
+   * الحساب مالوش كارت هناك لسه).
+   */
+  async linkWithCode(customerId, code) {
+    const invalid = () => ApiError.badRequest('الكود غلط أو انتهى — اطلب كود جديد من المحل', { code: 'LINK_INVALID' });
+    const account = await queryOne("SELECT id, phone FROM customers WHERE id = ? AND status = 'active'", [customerId]);
+    if (!account?.phone) throw invalid();
+    const record = await queryOne(
+      `SELECT l.id, l.shop_id, l.shop_customer_id, l.code_hash FROM card_link_codes l
+         JOIN shop_customers sc ON sc.id = l.shop_customer_id
+        WHERE sc.phone = ? AND sc.customer_id IS NULL AND l.used_at IS NULL AND l.expires_at > NOW()
+        ORDER BY l.id DESC LIMIT 1`,
+      [account.phone],
+    );
+    if (!record?.code_hash) throw invalid();
+    const expected = Buffer.from(record.code_hash, 'hex');
+    const actual = Buffer.from(linkCodeHash(record.id, String(code)), 'hex');
+    if (!crypto.timingSafeEqual(expected, actual)) {
+      // بعد آخر محاولة الكود بيتحرق، والزبون يطلب كود جديد
+      await execute(
+        'UPDATE card_link_codes SET attempts = attempts + 1, used_at = IF(attempts + 1 >= ?, NOW(), used_at) WHERE id = ?',
+        [LINK_CODE_ATTEMPTS, record.id],
+      );
+      throw invalid();
+    }
+
+    const cardId = await transaction(async (tx) => {
+      const used = await tx.execute(
+        'UPDATE card_link_codes SET used_at = NOW(), linked_customer_id = ? WHERE id = ? AND used_at IS NULL',
+        [customerId, record.id],
+      );
+      if (used.affectedRows === 0) throw invalid();
+      // الكارتين بالترتيب عشان ما يحصلش deadlock مع طلب تاني
+      const rows = await tx.query(
+        `SELECT ${CARD_COLUMNS} FROM shop_customers
+          WHERE shop_id = ? AND (id = ? OR customer_id = ?) ORDER BY id FOR UPDATE`,
+        [record.shop_id, record.shop_customer_id, customerId],
+      );
+      const source = rows.find((row) => row.id === record.shop_customer_id);
+      const target = rows.find((row) => row.customer_id === customerId);
+      if (!source || source.customer_id !== null) throw invalid();
+      if (!target) {
+        await tx.execute('UPDATE shop_customers SET customer_id = ? WHERE id = ?', [customerId, source.id]);
+        return source.id;
+      }
+      await mergeCards(tx, source, target);
+      return target.id;
+    });
+
+    const card = await queryOne(
+      `SELECT sc.id, sc.shop_id, sc.stamps, sc.visits, sc.last_visit_at, sc.reminders_off, s.name AS shop_name, s.slug AS shop_slug
+         FROM shop_customers sc JOIN shops s ON s.id = sc.shop_id WHERE sc.id = ?`,
+      [cardId],
+    );
+    return { ...card, reminders_off: Boolean(card.reminders_off), loyalty: await loyaltyFor(card.shop_id, card.stamps) };
   },
 
   async photos(customerId) {

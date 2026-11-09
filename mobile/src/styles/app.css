@@ -149,3 +149,6 @@ a.btn.primary { color: var(--on-leather); }
 .bill-row .leader { flex: 1 1 auto; min-width: 12px; border-bottom: 1.5px dotted var(--line-strong); transform: translateY(-3px); }
 .bill-row.strong { font-weight: 700; font-size: 1.1rem; }
 .bill-sum { padding-top: var(--sp-2); border-top: 1px dashed var(--line-strong); }
+
+/* «عندك كارت في محل؟» (ربط كارت المحل بكود من الاستقبال) */
+.link-card-toggle { align-self: flex-start; padding: 0; background: none; border: 0; color: var(--marker); font-size: var(--fs-sm); text-decoration: underline; text-underline-offset: 3px; }

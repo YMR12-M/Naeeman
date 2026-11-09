@@ -6,16 +6,56 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api.js';
 import { Icon } from '../../lib/icons.jsx';
-import { formatDate, formatDateTime, formatMoney, whatsappLink } from '../../lib/format.js';
+import { formatDate, formatDateTime, formatMoney, formatPhone, whatsappLink } from '../../lib/format.js';
 import { shrinkImage } from '../../lib/image.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import {
-  Button, Field, Input, Loading, Modal, Switch, Textarea, useConfirm,
+  Button, Field, Input, Loading, Modal, Notice, Switch, Textarea, useConfirm,
 } from '../ui/index.js';
+import { LeatherButton, Mirror } from '../brand/index.jsx';
 import { AuthImage, LoyaltyNote, StampRow } from './CardBits.jsx';
 
 const EVENT_LABELS = { earn: 'ختم', redeem: 'صرف المكافأة', adjust: 'تعديل', merge: 'دمج' };
+
+/**
+ * كود ربط الكارت بحساب التطبيق: رقم الحساب مش متأكّد منه، فالكارت (بأختامه
+ * وصوره) ما بيترَبطش لوحده. الاستقبال بيطلّع الكود وهو شايف صاحب الكارت.
+ */
+function LinkCodeModal({ card, onClose }) {
+  const toast = useToast();
+  const [result, setResult] = useState(null);
+  const [busy, setBusy] = useState(false);
+  async function issue() {
+    setBusy(true);
+    try { setResult(await api.post(`/cards/${card.id}/link-code`)); } catch (error) { toast.error(error.message); } finally { setBusy(false); }
+  }
+  return (
+    <Modal open onClose={onClose} title="ربط الكارت بالتطبيق" size="narrow"
+      footer={result ? <LeatherButton onClick={onClose}>تمام</LeatherButton>
+        : <><Button onClick={onClose}>رجوع</Button><LeatherButton loading={busy} onClick={issue}>طلّع الكود</LeatherButton></>}>
+      {result ? (
+        <div className="stack center">
+          <p>الكود لكارت <span className="bold">{result.card.name}</span> (<span className="num">{formatPhone(result.card.phone)}</span>)</p>
+          <Mirror arch className="pair-code">
+            <span className="ticket-number" dir="ltr" style={{ fontSize: 'clamp(2.4rem, 9vw, 3.4rem)', letterSpacing: '0.12em' }}>{result.code}</span>
+          </Mirror>
+          <p className="small muted">
+            الزبون يفتح التطبيق ← «حسابي» ← «عندك كارت في محل؟»، ويكتب الكود. لازم يكون مسجّل بنفس الرقم.
+            الكود صالح <span className="num">{result.expires_in_minutes}</span> دقيقة ومرّة واحدة.
+          </p>
+        </div>
+      ) : (
+        <div className="stack">
+          <p className="soft">
+            الزبون ده عنده كارت بأختامه وصور قصّاته من قبل التطبيق. لما يكتب الكود في التطبيق، الكارت ده يبقى على حسابه.
+          </p>
+          <Notice icon="alert">اتأكد إن ده صاحب الكارت فعلًا (بالشكل، أو بآخر صورة قصّة) قبل ما تديله الكود.</Notice>
+        </div>
+      )}
+    </Modal>
+  );
+}
 
 function StampsModal({ card, onClose, onDone }) {
   const toast = useToast();
@@ -61,6 +101,7 @@ export default function CardModal({ cardId, onClose }) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [stamps, setStamps] = useState(false);
+  const [linking, setLinking] = useState(false);
   const [viewing, setViewing] = useState(null);
 
   useEffect(() => { if (card.data) setNotes(card.data.notes ?? ''); }, [card.data?.notes]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -111,7 +152,11 @@ export default function CardModal({ cardId, onClose }) {
                   <Icon name="whatsapp" size={16} />واتساب
                 </a>
               )}
+              {!data.phone && data.app_phone && <span className="muted" title="الرقم اللي اتسجّل بيه في التطبيق (مش متأكّد منه)"><span className="num">{data.app_phone}</span> (من التطبيق)</span>}
               <span className={`badge ${data.has_app ? 'ok' : ''}`}>{data.has_app ? 'عنده التطبيق' : 'من غير تطبيق'}</span>
+              {!data.has_app && data.phone && can('cards.write') && (
+                <Button size="sm" variant="ghost" icon="link" onClick={() => setLinking(true)}>ربط بالتطبيق</Button>
+              )}
             </div>
 
             <div className="card-stats">
@@ -203,6 +248,7 @@ export default function CardModal({ cardId, onClose }) {
         </div>
       )}
       {stamps && data && <StampsModal card={data} onClose={() => setStamps(false)} onDone={refresh} />}
+      {linking && data && <LinkCodeModal card={data} onClose={() => setLinking(false)} />}
       {viewing && (
         <Modal open onClose={() => setViewing(null)} title={`قصّة ${formatDate(String(viewing.created_at).slice(0, 10))}${viewing.barber_name ? ` — أ. ${viewing.barber_name}` : ''}`}
           footer={<>{can('cards.write') && <Button variant="danger" icon="trash" onClick={() => removePhoto(viewing)}>امسح</Button>}<Button onClick={() => setViewing(null)}>رجوع</Button></>}>

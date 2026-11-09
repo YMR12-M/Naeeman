@@ -53,6 +53,65 @@ function Profile() {
   );
 }
 
+/**
+ * «عندك كارت في محل؟»: الزبون اللي كان بيروح المحل قبل التطبيق، كارته
+ * (أختامه وصور قصّاته) ما بيترَبطش بحسابه لوحده — الاستقبال بيدّيله كود
+ * وهو في المحل، ويكتبه هنا. لازم يكون مسجّل بنفس رقم الكارت.
+ */
+export function LinkCard() {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [code, setCode] = useState('');
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(event) {
+    event.preventDefault();
+    const clean = code.replace(/[٠-٩]/g, (digit) => '٠١٢٣٤٥٦٧٨٩'.indexOf(digit)).replace(/\D/g, '');
+    if (clean.length !== 6) { setError('الكود 6 أرقام'); return; }
+    setBusy(true);
+    setError(null);
+    try {
+      const card = await api.post('/me/cards/link', { code: clean });
+      toast.success(`كارتك في ${card.shop_name} بقى على حسابك`);
+      setCode('');
+      setOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['cards'] });
+      queryClient.invalidateQueries({ queryKey: ['photos'] });
+      queryClient.invalidateQueries({ queryKey: ['history'] });
+    } catch (failure) {
+      setError(failure.errors?.code ?? failure.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button type="button" className="link-card-toggle" onClick={() => setOpen(true)}>
+        عندك كارت في محل من قبل التطبيق؟ اربطه بحسابك
+      </button>
+    );
+  }
+  return (
+    <form className="stack sm" onSubmit={submit} noValidate>
+      <p className="small">اطلب كود من الاستقبال وإنت في المحل، واكتبه هنا. أختامك وصور قصّاتك هتظهر عندك.</p>
+      {error && <Notice tone="danger" icon="alert">{error}</Notice>}
+      <Field label="الكود">
+        {(props) => (
+          <Input {...props} inputMode="numeric" autoComplete="one-time-code" dir="ltr" className="ltr-input code-input"
+            maxLength={6} value={code} onChange={(event) => setCode(event.target.value)} autoFocus />
+        )}
+      </Field>
+      <div className="row">
+        <Button type="submit" variant="primary" loading={busy}>اربط</Button>
+        <Button onClick={() => { setOpen(false); setError(null); }}>رجوع</Button>
+      </div>
+    </form>
+  );
+}
+
 /** كروت الأختام في كل محل زرته، ومفتاح «فكّرني لو غبت» لكل محل */
 function MyCards() {
   const queryClient = useQueryClient();
@@ -64,10 +123,11 @@ function MyCards() {
     onError: (failure) => toast.error(failure.message),
   });
 
-  if (!cards.data || cards.data.length === 0) return null;
+  if (!cards.data) return null;
   return (
     <Mirror className="page-card stack">
       <h2>كروتي</h2>
+      {cards.data.length === 0 && <p className="small muted">أوّل ما تاخد دور في محل، كارتك هناك هيظهر هنا.</p>}
       {cards.data.map((card) => (
         <div key={card.id} className="stack sm my-card">
           <div className="row between">
@@ -84,6 +144,7 @@ function MyCards() {
           />
         </div>
       ))}
+      <LinkCard />
     </Mirror>
   );
 }

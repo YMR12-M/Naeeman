@@ -123,7 +123,11 @@ export const meService = {
   },
 
   async ticket(customerId, ticketId) {
-    const [ticket] = await readTickets('id = ? AND customer_id = ?', [ticketId, customerId]);
+    // دوره هو، أو زيارة قديمة على كارت اترَبط بحسابه (بكود من المحل)
+    const [ticket] = await readTickets(
+      'id = ? AND (customer_id = ? OR shop_customer_id IN (SELECT id FROM shop_customers WHERE customer_id = ?))',
+      [ticketId, customerId, customerId],
+    );
     if (!ticket) throw ApiError.notFound('الدور غير موجود', { code: 'TICKET_NOT_FOUND' });
     return viewOf(ticket);
   },
@@ -146,10 +150,10 @@ export const meService = {
          LEFT JOIN bills bl ON bl.ticket_id = t.id AND bl.status <> 'void'
          JOIN shops s ON s.id = t.shop_id
          LEFT JOIN barbers b ON b.id = t.barber_id
-        WHERE t.customer_id = ?
+        WHERE t.customer_id = ? OR t.shop_customer_id IN (SELECT id FROM shop_customers WHERE customer_id = ?)
         ORDER BY t.id DESC
         LIMIT 50`,
-      [customerId],
+      [customerId, customerId],
     );
     return rows.map((row) => ({ ...row, total: Number(row.total), bill_total: row.bill_total === null ? null : Number(row.bill_total) }));
   },
