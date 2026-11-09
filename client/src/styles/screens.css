@@ -71,6 +71,14 @@ html.device-screen body { background-color: var(--wall); background-image: none;
 .chair-customer { font-size: 1.6rem; font-weight: 600; }
 .chair-empty { font-size: 1.8rem; padding: var(--sp-4) 0; }
 .chair-next-line { font-size: 1.3rem; }
+.chair-next-note { display: block; font-size: 1rem; opacity: 0.85; }
+/* كارت الزبون على الكرسي: آخر قصّة + الملاحظات + زرار التصوير */
+.chair-card { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); background: var(--glass); border: var(--frame-sm) solid var(--chrome); border-radius: var(--r-md); }
+.chair-photo, .chair-card .photo-loading, .chair-card .photo-missing { flex: 0 0 auto; width: 84px; aspect-ratio: 3 / 4; object-fit: cover; border-radius: var(--r-sm); border: var(--frame-sm) solid var(--chrome); }
+.chair-card-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.chair-notes { margin: 0; font-size: 1.25rem; font-weight: 600; overflow-wrap: anywhere; }
+.chair-card .btn { flex: 0 0 auto; min-height: 56px; }
+@media (max-width: 560px) { .chair-card { flex-wrap: wrap; } .chair-card .btn { width: 100%; } }
 .chair .leather.giant { flex: 1 0 34vh; }
 .chair-floor { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); margin: 0 calc(var(--sp-4) * -1); }
 .chair-floor .btn { min-height: 64px; font-size: 1.1rem; }

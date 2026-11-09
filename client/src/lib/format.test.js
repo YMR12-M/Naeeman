@@ -14,6 +14,14 @@ describe('الفلوس', () => {
     expect(formatMoney(null)).toBe('—');
   });
 
+  test('علامة الناقص والزائد جوّه العزل مش برّاه', () => {
+    expect(plain(formatMoney(16000, { sign: '−' }))).toBe('−160 ج');
+    expect(plain(formatMoney(150, { sign: '+' }))).toBe('+1.50 ج');
+    // العلامة جوّه الحدود، فمفيش حاجة بتلزق في «ج»
+    expect(formatMoney(16000, { sign: '−' }).startsWith('\u2067−')).toBe(true);
+    expect(formatMoney(null, { sign: '−' })).toBe('—');
+  });
+
   test('اللي المستخدم كتبه بيتحوّل لقروش صحيحة', () => {
     expect(inputToMinor('80')).toBe(8000);
     expect(inputToMinor('12.5')).toBe(1250);

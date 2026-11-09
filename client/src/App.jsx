@@ -19,6 +19,11 @@ const Devices = page(() => import('./pages/Devices.jsx'));
 const Settings = page(() => import('./pages/Settings.jsx'));
 const Team = page(() => import('./pages/Team.jsx'));
 const Audit = page(() => import('./pages/Audit.jsx'));
+const Cashier = page(() => import('./pages/Cashier.jsx'));
+const DayClose = page(() => import('./pages/DayClose.jsx'));
+const Products = page(() => import('./pages/Products.jsx'));
+const Payroll = page(() => import('./pages/Payroll.jsx'));
+const Customers = page(() => import('./pages/Customers.jsx'));
 const NotFound = page(() => import('./pages/NotFound.jsx'));
 const Display = page(() => import('./screens/Display.jsx'));
 const Kiosk = page(() => import('./screens/Kiosk.jsx'));
@@ -56,6 +61,11 @@ function StaffRoutes() {
         <Route index element={<Queue />} />
         <Route path="setup" element={<Setup />} />
         <Route path="today" element={<Today />} />
+        <Route path="cashier" element={<Cashier />} />
+        <Route path="day-close" element={<DayClose />} />
+        <Route path="products" element={<Products />} />
+        <Route path="payroll" element={<Payroll />} />
+        <Route path="customers" element={<Customers />} />
         <Route path="services" element={<Services />} />
         <Route path="barbers" element={<Barbers />} />
         <Route path="devices" element={<Devices />} />

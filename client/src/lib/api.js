@@ -121,10 +121,11 @@ function buildQuery(params = {}) {
   return text ? `?${text}` : '';
 }
 
-async function rawRequest(path, { method = 'GET', body, params, auth = true, retry = true, form = false, blob = false, key } = {}) {
+async function rawRequest(path, { method = 'GET', body, params, auth = true, retry = true, form = false, blob = false, key, contentType } = {}) {
   const headers = { Accept: blob ? '*/*' : 'application/json', 'X-Client-Type': clientType() };
   if (key) headers['Idempotency-Key'] = key;
   if (body !== undefined && !form) headers['Content-Type'] = 'application/json';
+  if (contentType) headers['Content-Type'] = contentType;
   if (auth && accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
   let response;
@@ -149,7 +150,7 @@ async function rawRequest(path, { method = 'GET', body, params, auth = true, ret
 
   if (response.status === 401 && retry && auth && ['TOKEN_EXPIRED', 'NO_TOKEN'].includes(payload?.code)) {
     const session = await refreshSession();
-    if (session) return rawRequest(path, { method, body, params, auth, retry: false, form, blob, key });
+    if (session) return rawRequest(path, { method, body, params, auth, retry: false, form, blob, key, contentType });
     await endSession({ notify: true });
   }
 
@@ -187,6 +188,12 @@ export const api = {
   patch: (path, body = {}) => unwrap(rawRequest(path, { method: 'PATCH', body })),
   put: (path, body = {}) => unwrap(rawRequest(path, { method: 'PUT', body })),
   del: (path) => unwrap(rawRequest(path, { method: 'DELETE' })),
+  /** ملف خام (صورة قصّة مثلًا) بنوعه الحقيقي */
+  upload: (path, file, params) => unwrap(rawRequest(path, {
+    method: 'POST', body: file, form: true, contentType: file.type || 'image/jpeg', params,
+  })),
+  /** ملف بتوكن الدخول (الصور مش في مكان عام) */
+  blob: async (path) => (await rawRequest(path, { blob: true })).blob,
 };
 
 export { BASE as API_BASE };

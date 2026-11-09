@@ -110,3 +110,96 @@
 .setup-service.is-off .input { opacity: 0.45; }
 .setup-barbers { grid-template-columns: minmax(0, 1fr) 90px 110px; }
 .setup-barber { display: contents; }
+
+/* ═══ المرحلة التانية ═══ */
+.stack.xs { gap: 4px; }
+.block { display: block; }
+.danger-text { color: var(--danger); }
+.strike { text-decoration: line-through; }
+
+/* شرايح صغيرة (خدمات سريعة، فئات الفلوس، حركات الدرج) */
+.chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.chips.tight { gap: 4px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; min-height: 34px; padding: 0 var(--sp-3); background: var(--surface-strong); border: 1.5px solid var(--line); border-radius: 999px; color: var(--text); font-size: var(--fs-sm); }
+.chip:hover:not(:disabled) { border-color: var(--line-strong); }
+.chips.tight .chip { min-height: 28px; padding: 0 var(--sp-2); }
+
+/* ── الكاشير ── */
+.cashier { display: grid; gap: var(--sp-4); grid-template-columns: minmax(0, 1fr) 330px; align-items: start; }
+@media (max-width: 980px) { .cashier { grid-template-columns: minmax(0, 1fr); } }
+.bill-list-wrap { padding: var(--sp-2) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); }
+.bill-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.bill-list > li { border-bottom: 1px solid var(--line); }
+.bill-list > li:last-child { border-bottom: 0; }
+.bill-row { display: flex; align-items: center; gap: var(--sp-3); width: 100%; padding: var(--sp-3) 0; background: none; border: 0; text-align: start; color: var(--text); }
+.bill-row:hover .bold { text-decoration: underline; text-underline-offset: 3px; }
+.bill-row.plain { padding: var(--sp-2) 0; }
+.missed-row { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.drawer-panel { padding: var(--sp-4); }
+.drawer-expected { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--sp-2) 0; border-block: 1.5px solid var(--line); }
+
+/* ── الفاتورة ── */
+.bill { display: grid; gap: var(--sp-5); grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
+.bill:has(> .bill-main:only-child) { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 760px) { .bill { grid-template-columns: minmax(0, 1fr); } }
+.bill-side { padding: var(--sp-4); background: var(--surface-strong); border: 1.5px solid var(--line); border-radius: var(--r-sm); }
+.bill-lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.bill-lines li { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) 0; border-bottom: 1px solid var(--line); }
+.bill-lines li:last-child { border-bottom: 0; }
+.bill-card { display: flex; gap: var(--sp-3); align-items: flex-start; flex-wrap: wrap; padding: var(--sp-2) var(--sp-3); border: 1.5px dashed var(--chrome-edge); border-radius: var(--r-sm); }
+.bill-note { margin: 0; max-width: 46ch; }
+.bill-summary { padding-top: var(--sp-2); border-top: 1.5px solid var(--line); }
+.bill-total { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-2) 0; border-block: 1.5px solid var(--line); }
+.product-search { position: relative; }
+.product-search svg { position: absolute; inset-inline-start: 12px; top: 12px; color: var(--text-muted); }
+.product-search .input { padding-inline-start: 38px; }
+.product-matches { list-style: none; margin: 0; padding: 0; border: 1.5px solid var(--line); border-radius: var(--r-sm); background: var(--surface-strong); }
+.product-matches li + li { border-top: 1px solid var(--line); }
+.product-matches button { display: flex; align-items: center; gap: var(--sp-3); width: 100%; padding: var(--sp-2) var(--sp-3); background: none; border: 0; text-align: start; color: var(--text); }
+.product-matches button:hover { background: var(--surface); }
+.pay-line { display: grid; gap: var(--sp-2); grid-template-columns: minmax(0, 1fr) 120px; align-items: start; }
+.pay-line > :nth-child(3) { grid-column: 1 / -1; }
+.pay-line > .btn { grid-column: 2; justify-self: end; }
+.pay-tender { display: flex; flex-direction: column; gap: 4px; }
+.reward-toggle { display: flex; flex-direction: column; gap: 4px; padding: var(--sp-2) var(--sp-3); background: var(--ok-soft); border-radius: var(--r-sm); }
+.serving-note { margin: 0; padding-top: var(--sp-1); border-top: 1px dashed var(--line); }
+
+/* ── كارت الأختام ── */
+.stamp-row { display: inline-flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.stamp { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; border: 1.5px dashed var(--chrome-edge); color: var(--cream); }
+.stamp.on { background: var(--ink); border: 1.5px solid var(--ink); }
+.stamp.prize { border-style: solid; color: var(--chrome-edge); }
+.stamp.prize.on { background: var(--marker); border-color: var(--marker); color: var(--cream); }
+.stamp-row.sm .stamp { width: 18px; height: 18px; }
+.stamp-row.sm svg { width: 10px; height: 10px; }
+
+/* ── كارت الزبون ── */
+.card-view { display: grid; gap: var(--sp-5); grid-template-columns: minmax(0, 1fr) 280px; align-items: start; }
+@media (max-width: 760px) { .card-view { grid-template-columns: minmax(0, 1fr); } }
+.card-stats { display: grid; gap: var(--sp-2); grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+.card-stats > div { display: flex; flex-direction: column; gap: 2px; padding: var(--sp-2) var(--sp-3); background: var(--surface-strong); border: 1.5px solid var(--line); border-radius: var(--r-sm); }
+.visit-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.visit-list li { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) 0; border-bottom: 1px solid var(--line); }
+.visit-list li:last-child { border-bottom: 0; }
+.photo-grid { display: grid; gap: var(--sp-2); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.photo-thumb { display: flex; flex-direction: column; gap: 4px; padding: 0; background: none; border: 0; color: var(--text-muted); text-align: center; }
+.photo-thumb img, .photo-thumb .photo-loading, .photo-thumb .photo-missing { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: var(--r-sm); border: var(--frame-sm) solid var(--chrome); }
+.photo-loading { display: block; background: var(--surface); }
+.photo-missing { display: grid; place-items: center; background: var(--surface); color: var(--text-muted); }
+.photo-full { display: block; max-width: 100%; max-height: 70vh; margin: 0 auto; border-radius: var(--r-sm); }
+
+/* ── الإعدادات: طرق الدفع ── */
+.method-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.method-list li { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) 0; border-bottom: 1px solid var(--line); }
+.method-list li:last-child { border-bottom: 0; }
+.method-list li.is-off { opacity: 0.55; }
+
+/* ── حساب الحلاقين ── */
+.pay-grid { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); align-items: start; }
+.pay-card { padding: var(--sp-4); }
+
+/* ── وضع «المحل هو السيرفر»: روابط الواي فاي بالـ QR ── */
+.lan-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.lan-list li { display: flex; align-items: center; gap: var(--sp-3); }
+.lan-qr { flex: 0 0 auto; width: 96px; height: 96px; padding: 6px; background: var(--glass); border: var(--frame-sm) solid var(--chrome); border-radius: var(--r-sm); }
+.lan-qr svg { display: block; width: 100%; height: 100%; }

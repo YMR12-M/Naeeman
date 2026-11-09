@@ -14,12 +14,17 @@ import { Sign, Wordmark } from '../brand/index.jsx';
 
 const NAV = [
   { to: '/', label: 'الطابور', icon: 'scissors', permission: 'queue.read', end: true },
+  { to: '/cashier', label: 'الكاشير', icon: 'receipt', permission: 'billing.use' },
+  { to: '/customers', label: 'الزباين', icon: 'users', permission: 'cards.read' },
   { to: '/today', label: 'النهارده', icon: 'chart', permission: 'reports.read' },
+  { to: '/day-close', label: 'تقفيل اليوم', icon: 'lock', permission: 'dayclose.close' },
   { to: '/services', label: 'قايمة الأسعار', icon: 'list', permission: 'services.read' },
+  { to: '/products', label: 'المنتجات', icon: 'tag', permission: 'products.read' },
   { to: '/barbers', label: 'الحلاقين', icon: 'chair', permission: 'barbers.read' },
+  { to: '/payroll', label: 'حساب الحلاقين', icon: 'dollar', permission: 'payroll.read' },
   { to: '/devices', label: 'الأجهزة', icon: 'tv', permission: 'devices.manage' },
   { to: '/settings', label: 'الإعدادات', icon: 'settings', permission: 'shop.write' },
-  { to: '/team', label: 'الفريق', icon: 'users', permission: 'users.read' },
+  { to: '/team', label: 'الفريق', icon: 'user-plus', permission: 'users.read' },
   { to: '/audit', label: 'السجل', icon: 'shield', permission: 'audit.read' },
 ];
 

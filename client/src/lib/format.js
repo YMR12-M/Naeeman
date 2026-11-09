@@ -18,11 +18,12 @@ export const formatNumber = (value) => (value === null || value === undefined ? 
  * معزول كاتجاه RTL (زي التواريخ تحت): الـ «ج» تفضل على شمال الرقم في القراية
  * العربية حتى لو المبلغ جوّه `.num` (اللي بيفرض LTR).
  */
-export function formatMoney(minor) {
+export function formatMoney(minor, { sign = '' } = {}) {
   if (minor === null || minor === undefined) return '—';
   const pounds = minor / 100;
   const text = Number.isInteger(pounds) ? numberFormat.format(pounds) : pounds.toFixed(2);
-  return `\u2067${text} ج\u2069`;
+  // العلامة (− أو +) جوّه العزل: برّاه كانت بتلزق في «ج» بدل الرقم
+  return `\u2067${sign}${text} ج\u2069`;
 }
 
 /** ما كتبه المستخدم (جنيه) ← قروش صحيحة، أو null لو غلط */

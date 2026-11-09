@@ -7,17 +7,69 @@
  *  وزرار «التالي» جلد ماسك تلت الشاشة. الباقي على البلاط تحت.
  * ═══════════════════════════════════════════════════════════════
  */
-import { useCallback, useEffect, useState } from 'react';
-import { deviceAct, deviceHeaders, deviceRequest } from '../lib/device.js';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  deviceAct, deviceBlob, deviceHeaders, deviceRequest, deviceUpload,
+} from '../lib/device.js';
 import { useLive } from '../lib/live.js';
 import { useNow } from '../lib/hooks.js';
 import { formatMinutes, minutesSince } from '../lib/format.js';
+import { shrinkImage } from '../lib/image.js';
 import { Icon } from '../lib/icons.jsx';
 import {
   LeatherButton, MarkerNote, Mirror, Portrait, PriceRow, Sign, TicketNumber,
 } from '../components/brand/index.jsx';
 import { Loading, Modal, Notice } from '../components/ui/index.js';
+import { AuthImage, LoyaltyNote } from '../components/shop/CardBits.jsx';
 import DeviceGate, { useDevice } from './DeviceGate.jsx';
+
+/** صور الكروت بتتحمّل بتوكن الكرسي (دالة ثابتة عشان AuthImage ما يعيدش التحميل) */
+const loadChairImage = (path) => deviceBlob('chair', path);
+
+/**
+ * كارت الزبون قدّام الحلاق: ملاحظات الزبون وآخر قصّة والأختام، وزرار
+ * «صوّر القصّة». الهدف: اللي على الكرسي، أو اللي لسه خالص (من غير صورة).
+ */
+function CustomerCard({ serving, recent, onPhoto, uploading }) {
+  const file = useRef(null);
+  const card = serving?.card ?? null;
+  const target = serving ? (card ? serving : null) : (recent && !recent.has_photo ? recent : null);
+  if (!card && !target) return null;
+
+  return (
+    <section className="chair-card" aria-label="كارت الزبون">
+      {card?.last_photo_id && (
+        <AuthImage path={`/chair/photos/${card.last_photo_id}`} load={loadChairImage} alt="آخر قصّة" className="chair-photo" />
+      )}
+      <div className="chair-card-body">
+        {card?.notes
+          ? <p className="chair-notes">{card.notes}</p>
+          : card && <span className="small muted">مفيش ملاحظات على الزبون ده</span>}
+        {card && (
+          <span className="small muted">
+            زيارة رقم <span className="num">{(card.visits ?? 0) + 1}</span>
+          </span>
+        )}
+        {card?.loyalty?.eligible && <LoyaltyNote loyalty={card.loyalty} />}
+      </div>
+      {target && (
+        <>
+          <input
+            ref={file}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            hidden
+            onChange={(event) => { const chosen = event.target.files?.[0]; event.target.value = ''; if (chosen) onPhoto(target, chosen); }}
+          />
+          <button type="button" className="btn lg" disabled={uploading} onClick={() => file.current?.click()}>
+            <Icon name="camera" />{uploading ? 'بنرفع الصورة…' : (serving ? 'صوّر القصّة' : `صوّر قصّة ${target.name}`)}
+          </button>
+        </>
+      )}
+    </section>
+  );
+}
 
 /* ── أوّل الوردية: الاسم ثم الـ PIN ── */
 function SignIn({ onSignedIn }) {
@@ -92,6 +144,7 @@ function Station({ onSignedOut }) {
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState(null);
   const [adding, setAdding] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const live = useLive({
     path: '/chair/stream',
     load: () => deviceRequest('chair', '/chair/queue'),
@@ -116,6 +169,22 @@ function Station({ onSignedOut }) {
   useEffect(() => {
     if (live.error?.code === 'CHAIR_SIGNED_OUT') onSignedOut();
   }, [live.error, onSignedOut]);
+
+  /** صورة القصّة: بتتصغّر على التابلت وبعدين تترفع، والرد فيه الشاشة محدّثة */
+  const sendPhoto = useCallback(async (target, chosen) => {
+    setUploading(true);
+    setError(null);
+    try {
+      const small = await shrinkImage(chosen);
+      const result = await deviceUpload('chair', '/chair/photo', small, { ticket_id: target.id });
+      if (result?.view) live.setData(result.view);
+    } catch (failure) {
+      if (failure.code === 'CHAIR_SIGNED_OUT') onSignedOut();
+      else setError(failure.message);
+    } finally {
+      setUploading(false);
+    }
+  }, [live, onSignedOut]);
 
   const view = live.data;
   if (!view) return <Loading />;
@@ -154,10 +223,13 @@ function Station({ onSignedOut }) {
           {view.next.length === 0 ? <MarkerNote>مفيش حد</MarkerNote> : view.next.map((ticket) => (
             <MarkerNote flat key={ticket.id} className="chair-next-line">
               <span className="num">{ticket.number}</span> {ticket.name} {ticket.arrived ? '✓ وصل' : ticket.called ? '← اتنادى' : '· لسه ما وصلش'}
+              {ticket.card?.notes && <span className="chair-next-note">{ticket.card.notes}</span>}
             </MarkerNote>
           ))}
         </Mirror>
       </div>
+
+      <CustomerCard serving={serving} recent={view.recent} onPhoto={sendPhoto} uploading={uploading} />
 
       {/* مقفول طول ما فيه فعل تاني شغّال: دوستين ورا بعض = زبونين اتنادوا */}
       <LeatherButton giant block loading={busy === 'next'} disabled={Boolean(busy)} onClick={() => act('next', '/chair/next')}>

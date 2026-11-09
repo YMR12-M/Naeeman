@@ -1,7 +1,7 @@
 /**
- * النهارده: ملخّص يوم الشغل زي دفتر المحل آخر اليوم — الإيراد كبير في
- * مراية، والباقي سطور بنقط زي قايمة الأسعار. المرحلة الأولى بتعتبر كل دور
- * خلص اتدفع كاش بإجمالي خدماته.
+ * النهارده: ملخّص يوم الشغل زي دفتر المحل آخر اليوم — المبيعات كبيرة في
+ * مراية، والباقي سطور بنقط زي قايمة الأسعار. الفلوس من الفواتير: المحصّل
+ * لكل طريقة دفع، والخصومات والبقشيش والمرتجع والمصروفات، والمنتجات.
  */
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -44,10 +44,27 @@ export default function Today() {
       {!day ? <Loading /> : (
         <div className="today">
           <Mirror arch className="revenue">
-            <span className="muted">إيراد اليوم</span>
+            <span className="muted">مبيعات اليوم</span>
             <TicketNumber value={formatNumber(day.revenue / 100)} size="3.4rem" />
-            <span className="muted">جنيه من <span className="num">{day.done}</span> دور خلص</span>
+            <span className="muted">جنيه من <span className="num">{day.bills}</span> فاتورة · <span className="num">{day.done}</span> دور خلص</span>
           </Mirror>
+
+          <section className="panel">
+            <div className="panel-head"><h2 className="panel-title">الفلوس</h2></div>
+            <div className="panel-body stack sm">
+              {day.methods.length === 0 ? <p className="small muted">لسه مفيش دفعات.</p>
+                : day.methods.map((method) => <Line key={method.code} label={method.label} value={<span className="num">{formatMoney(method.net)}</span>} />)}
+              <Line label="المحصّل كله" value={<span className="num bold">{formatMoney(day.collected)}</span>} />
+              <Line label="الخدمات" value={<span className="num">{formatMoney(day.services_revenue)}</span>} />
+              <Line label="المنتجات" value={<span className="num">{formatMoney(day.products_revenue)}</span>} />
+              {day.discounts > 0 && <Line label="الخصومات" value={<span className="num">{formatMoney(day.discounts, { sign: '−' })}</span>} />}
+              {day.rewards > 0 && <Line label="مكافآت الأختام" value={<span className="num">{formatMoney(day.rewards, { sign: '−' })}</span>} />}
+              {day.tips > 0 && <Line label="البقشيش" value={<span className="num">{formatMoney(day.tips)}</span>} />}
+              {day.refunds > 0 && <Line label="المرتجع" value={<span className="num">{formatMoney(day.refunds, { sign: '−' })}</span>} />}
+              {day.expenses > 0 && <Line label="مصروفات الدرج" value={<span className="num">{formatMoney(day.expenses, { sign: '−' })}</span>} />}
+              {day.open_bills.count > 0 && <Line label={<>فواتير مستنية الدفع (<span className="num">{day.open_bills.count}</span>)</>} value={<span className="num">{formatMoney(day.open_bills.total)}</span>} />}
+            </div>
+          </section>
 
           <section className="panel">
             <div className="panel-head"><h2 className="panel-title">الأدوار</h2></div>
@@ -80,13 +97,27 @@ export default function Today() {
                           {barber.avg_service_minutes !== null && <> · متوسّط {formatMinutes(barber.avg_service_minutes)}</>}
                         </div>
                       </div>
-                      <span className="num bold">{formatMoney(barber.revenue)}</span>
+                      <span className="stack xs" style={{ alignItems: 'flex-end' }}>
+                        <span className="num bold">{formatMoney(barber.revenue + barber.products)}</span>
+                        {barber.commission > 0 && <span className="small muted">نسبته {formatMoney(barber.commission)}</span>}
+                      </span>
                     </li>
                   ))}
                 </ul>
               )}
             </div>
           </section>
+
+          {day.products.length > 0 && (
+            <section className="panel">
+              <div className="panel-head"><h2 className="panel-title">المنتجات</h2></div>
+              <div className="panel-body stack sm">
+                {day.products.map((product) => (
+                  <PriceRow key={product.id ?? product.name} name={<>{product.name} <span className="small muted">× <span className="num">{product.qty}</span></span></>} price={product.revenue} />
+                ))}
+              </div>
+            </section>
+          )}
 
           <section className="panel">
             <div className="panel-head"><h2 className="panel-title">الخدمات</h2></div>

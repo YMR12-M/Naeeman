@@ -29,6 +29,8 @@ import {
   LeatherButton, MarkerNote, Mirror, OpenSign, Portrait, PriceRow, Sign, TicketNumber,
 } from '../components/brand/index.jsx';
 import RecoveryCodeModal from '../components/shop/RecoveryCodeModal.jsx';
+import BillModal from '../components/shop/BillModal.jsx';
+import CardModal from '../components/shop/CardModal.jsx';
 
 const errorText = (error) => error?.message ?? 'حصل خطأ غير متوقّع';
 
@@ -44,6 +46,8 @@ function TicketFlags({ ticket }) {
           : <span className="badge marker">{SOURCE_LABELS[ticket.source]}</span>}
       {ticket.delays_used > 0 && <span className="badge">أخّر {ticket.delays_used}</span>}
       {ticket.trust_confirm_required && !ticket.confirmed && <span className="badge warn">لازم يأكّد</span>}
+      {ticket.card?.loyalty?.eligible && <span className="badge ok" title={ticket.card.loyalty.reward}>مكافأة ★</span>}
+      {ticket.card?.notes && <span className="badge" title={ticket.card.notes}><Icon name="edit" size={12} /> ملاحظة</span>}
     </span>
   );
 }
@@ -70,6 +74,8 @@ function TicketLine({ ticket, barbersById, onAction, can, showExpected }) {
         <MenuItem icon="swap" onClick={() => onAction('assign', ticket)}>غيّر الحلاق</MenuItem>
         <MenuItem icon="plus" onClick={() => onAction('service', ticket)}>زوّد خدمة</MenuItem>
         {can('queue.manage') && <MenuItem icon="list" onClick={() => onAction('move', ticket)}>حرّك في الطابور</MenuItem>}
+        {can('billing.use') && <MenuItem icon="tag" onClick={() => onAction('bill', ticket)}>بيع منتج / الفاتورة</MenuItem>}
+        {ticket.card && can('cards.read') && <MenuItem icon="user" onClick={() => onAction('card', ticket)}>كارت الزبون</MenuItem>}
         {ticket.phone && (
           <a href={whatsappLink(ticket.phone, `أهلًا ${ticket.name}، دورك رقم ${ticket.number}.`)} target="_blank" rel="noreferrer" role="menuitem">
             <Icon name="whatsapp" size={16} />ابعت واتساب
@@ -85,7 +91,7 @@ function TicketLine({ ticket, barbersById, onAction, can, showExpected }) {
 
 /* ═══════════════════ عمود حلاق ═══════════════════ */
 
-function ServingCard({ ticket, now, onAction }) {
+function ServingCard({ ticket, now, onAction, can }) {
   const elapsed = minutesSince(ticket.started_at, now);
   return (
     <div className="serving">
@@ -101,9 +107,12 @@ function ServingCard({ ticket, now, onAction }) {
         </div>
         <Menu trigger={<Button variant="ghost" size="sm" icon="more" aria-label="أفعال الزبون اللي على الكرسي" />}>
           <MenuItem icon="plus" onClick={() => onAction('service', ticket)}>زوّد خدمة</MenuItem>
+          {can?.('billing.use') && <MenuItem icon="tag" onClick={() => onAction('bill', ticket)}>بيع منتج / الفاتورة</MenuItem>}
+          {ticket.card && can?.('cards.read') && <MenuItem icon="user" onClick={() => onAction('card', ticket)}>كارت الزبون</MenuItem>}
           <MenuItem icon="close" danger onClick={() => onAction('cancel', ticket)}>ألغِ (بسبب)</MenuItem>
         </Menu>
       </div>
+      {ticket.card?.notes && <p className="small serving-note"><Icon name="edit" size={13} /> {ticket.card.notes}</p>}
     </div>
   );
 }
@@ -127,7 +136,7 @@ function BarberColumn({ barber, tickets, now, barbersById, onAction, onBarber, c
       </header>
 
       {barber.serving
-        ? <ServingCard ticket={barber.serving} now={now} onAction={onAction} />
+        ? <ServingCard ticket={barber.serving} now={now} onAction={onAction} can={can} />
         : <div className="serving empty-chair"><MarkerNote>الكرسي فاضي</MarkerNote></div>}
 
       {can('queue.write') && (
@@ -378,7 +387,7 @@ export default function Queue() {
 
   async function onAction(kind, ticket) {
     if (kind === 'arrive') return run(`arrive-${ticket.id}`, () => api.act(`/queue/tickets/${ticket.id}/arrive`), `رقم ${ticket.number} وصل`);
-    if (kind === 'assign' || kind === 'service' || kind === 'move') return setDialog({ kind, ticket });
+    if (['assign', 'service', 'move', 'bill', 'card'].includes(kind)) return setDialog({ kind, ticket });
     if (kind === 'no-show') {
       const answer = await confirm({ title: `رقم ${ticket.number} ما جاش؟`, message: 'الدور هيتقفل ويتسجّل إنه ما جاش.', confirmLabel: 'ما جاش', danger: true });
       if (answer) run('no-show', () => api.act(`/queue/tickets/${ticket.id}/no-show`));
@@ -506,6 +515,8 @@ export default function Queue() {
       {dialog?.kind === 'assign' && <AssignModal ticket={dialog.ticket} barbers={present.filter((barber) => barber.status !== 'off')} onClose={() => setDialog(null)} onDone={live.refresh} />}
       {dialog?.kind === 'service' && <AddServiceModal ticket={dialog.ticket} services={activeServices} onClose={() => setDialog(null)} onDone={live.refresh} />}
       {dialog?.kind === 'move' && <MoveModal ticket={dialog.ticket} waiting={waiting} onClose={() => setDialog(null)} onDone={live.refresh} />}
+      {dialog?.kind === 'bill' && <BillModal ticketId={dialog.ticket.id} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'card' && <CardModal cardId={dialog.ticket.card.id} onClose={() => setDialog(null)} />}
     </div>
   );
 }

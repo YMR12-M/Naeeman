@@ -82,6 +82,45 @@ export async function deviceAct(type, path, body = {}) {
   }
 }
 
+/** صورة من السيرفر بتوكن الجهاز (الصور مش في مكان عام) */
+export async function deviceBlob(type, path) {
+  const stored = readDevice(type);
+  if (!stored) throw new ApiRequestError('الجهاز مش مربوط', { status: 401, code: 'NO_DEVICE_TOKEN' });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, { headers: { Accept: '*/*', 'X-Device-Token': stored.token } });
+  } catch {
+    throw new ApiRequestError('النت فاصل — بنحاول تاني', { offline: true });
+  }
+  if (!response.ok) throw new ApiRequestError('الصورة مش موجودة', { status: response.status });
+  return response.blob();
+}
+
+/** رفع ملف خام (صورة قصّة) بتوكن الجهاز. `params` بتروح في الرابط. */
+export async function deviceUpload(type, path, file, params = {}) {
+  const stored = readDevice(type);
+  if (!stored) throw new ApiRequestError('الجهاز مش مربوط', { status: 401, code: 'NO_DEVICE_TOKEN' });
+  const query = new URLSearchParams(params).toString();
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}${query ? `?${query}` : ''}`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'X-Device-Token': stored.token,
+        'Content-Type': file.type || 'image/jpeg',
+        'Idempotency-Key': newKey(),
+      },
+      body: file,
+    });
+  } catch {
+    throw new ApiRequestError('النت فاصل — جرّب تصوّر تاني', { offline: true });
+  }
+  const payload = await response.json().catch(() => null);
+  if (response.ok) return payload?.data ?? null;
+  throw new ApiRequestError(payload?.message || 'الصورة ما اترفعتش', { status: response.status, code: payload?.code, errors: payload?.errors });
+}
+
 export const deviceHeaders = (type) => {
   const stored = readDevice(type);
   return stored ? { 'X-Device-Token': stored.token } : null;

@@ -14,6 +14,8 @@ import {
   Button, Empty, Field, Input, Loading, Modal, Notice, useConfirm,
 } from '../components/ui/index.js';
 import { LeatherButton, MarkerNote, Mirror, TicketNumber } from '../components/brand/index.jsx';
+import LanLinks from '../components/shop/LanLinks.jsx';
+import { deviceOrigin, useHub } from '../lib/hub.js';
 import PageHead from '../components/layout/PageHead.jsx';
 
 const TYPES = [
@@ -36,7 +38,7 @@ function Countdown({ until }) {
     : <span className="small" style={{ color: 'var(--danger)' }}>الكود انتهى — اطلب واحد جديد</span>;
 }
 
-function PairModal({ onClose }) {
+function PairModal({ onClose, origin }) {
   const queryClient = useQueryClient();
   const [type, setType] = useState('display');
   const [name, setName] = useState('');
@@ -48,7 +50,7 @@ function PairModal({ onClose }) {
     onError: (failure) => setError(failure.message),
   });
   const close = () => { queryClient.invalidateQueries({ queryKey: ['devices'] }); onClose(); };
-  const url = `${window.location.origin}${TYPE[type].path}`;
+  const url = `${origin}${TYPE[type].path}`;
 
   return (
     <Modal open onClose={close} title="اربط جهاز"
@@ -92,6 +94,8 @@ export default function Devices() {
   const queryClient = useQueryClient();
   const [pairing, setPairing] = useState(false);
   const list = useQuery({ queryKey: ['devices'], queryFn: () => api.get('/devices'), refetchInterval: 30_000 });
+  const hub = useHub();
+  const shop = useQuery({ queryKey: ['shop'], queryFn: () => api.get('/shop'), enabled: Boolean(hub.data?.enabled) });
 
   async function revoke(device) {
     const answer = await confirm({ title: `إلغاء «${device.name}»؟`, message: 'الجهاز هيتقفل فورًا ومش هيرجع غير بكود ربط جديد.', confirmLabel: 'ألغِ الجهاز', danger: true });
@@ -113,6 +117,8 @@ export default function Devices() {
       <PageHead title="الأجهزة">
         <LeatherButton onClick={() => setPairing(true)}>اربط جهاز</LeatherButton>
       </PageHead>
+
+      <LanLinks hub={hub.data} shopSlug={shop.data?.slug} />
 
       {list.data.length === 0 ? (
         <Mirror>
@@ -144,7 +150,7 @@ export default function Devices() {
         </div>
       )}
 
-      {pairing && <PairModal onClose={() => setPairing(false)} />}
+      {pairing && <PairModal origin={deviceOrigin(hub.data)} onClose={() => setPairing(false)} />}
     </div>
   );
 }
